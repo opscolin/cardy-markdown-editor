@@ -67,4 +67,4 @@ npm run build
 
 ## 📄 开源协议
 
-MIT License
+Apache License 2.0
