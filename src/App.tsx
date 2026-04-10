@@ -70,22 +70,31 @@ const MarkdownCard = ({
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 group">
+    <div className="flex flex-col items-center gap-4 group w-[400px] shrink-0">
       <div 
         ref={cardRef}
         className={cn(
-          "exportable-card relative w-full max-w-[400px] aspect-[3/4] bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100 p-8 flex flex-col",
+          "exportable-card relative w-full aspect-[3/4] bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100 p-8 flex flex-col",
           showGrid && "bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]"
         )}
       >
         {/* Card Content */}
         <div className="flex-1 overflow-hidden z-10">
           <ReactMarkdown
+            urlTransform={(uri) => uri.startsWith('blob:') ? uri : uri}
             components={{
               h1: ({ children }) => <h1 className="text-2xl font-bold text-gray-900 mb-6 tracking-tight">{children}</h1>,
               h2: ({ children }) => <h2 className="text-xl font-bold text-gray-800 mb-4 tracking-tight">{children}</h2>,
               p: ({ children }) => <p className="text-gray-600 leading-relaxed mb-5 text-[15px]">{children}</p>,
               strong: ({ children }) => <strong className="font-bold text-gray-900">{children}</strong>,
+              img: ({ src, alt }) => (
+                <img 
+                  src={src} 
+                  alt={alt} 
+                  className="max-w-full h-auto rounded-lg my-4 shadow-md border border-gray-100 mx-auto" 
+                  referrerPolicy="no-referrer"
+                />
+              ),
               pre: ({ children }) => (
                 <div className="bg-[#1e1e1e] rounded-xl my-6 overflow-hidden shadow-lg border border-white/10">
                   {/* Mac Style Header */}
@@ -224,6 +233,107 @@ export default function App() {
         ? { ...f, content: newContent, updatedAt: Date.now() } 
         : f
     ));
+  };
+
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  // Helper to convert editor HTML to Markdown
+  const getMarkdownFromEditor = (el: HTMLElement) => {
+    let md = "";
+    const walk = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        md += node.textContent;
+      } else if (node instanceof HTMLImageElement) {
+        md += `\n![image](${node.src})\n`;
+      } else if (node instanceof HTMLBRElement) {
+        md += "\n";
+      } else if (node instanceof HTMLDivElement) {
+        if (md.length > 0 && !md.endsWith('\n')) md += "\n";
+        node.childNodes.forEach(walk);
+        if (!md.endsWith('\n')) md += "\n";
+      } else {
+        node.childNodes.forEach(walk);
+      }
+    };
+    el.childNodes.forEach(walk);
+    return md;
+  };
+
+  // Helper to convert Markdown to Editor HTML
+  const formatMarkdownToHtml = (md: string) => {
+    return md.split('\n').map(line => {
+      const imgMatch = line.match(/^!\[image\]\((blob:.*?)\)$/);
+      if (imgMatch) {
+        return `<img src="${imgMatch[1]}" class="max-w-full h-auto rounded-lg my-2 shadow-sm border border-gray-100">`;
+      }
+      return line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }).join('<br>');
+  };
+
+  const syncEditorToMarkdown = () => {
+    if (!editorRef.current) return;
+    const md = getMarkdownFromEditor(editorRef.current);
+    handleContentChange(md.trim());
+  };
+
+  // Update editor content only when switching files
+  React.useEffect(() => {
+    if (editorRef.current) {
+      const currentMd = getMarkdownFromEditor(editorRef.current).trim();
+      if (currentMd !== activeFile.content.trim()) {
+        editorRef.current.innerHTML = formatMarkdownToHtml(activeFile.content);
+      }
+    }
+  }, [activeFileId]);
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        e.preventDefault();
+        const file = items[i].getAsFile();
+        if (file) {
+          const url = URL.createObjectURL(file);
+          const img = document.createElement('img');
+          img.src = url;
+          img.className = "max-w-full h-auto rounded-lg my-2 shadow-sm border border-gray-100";
+          
+          // Insert at cursor
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(img);
+            // Move cursor after image
+            range.setStartAfter(img);
+            range.setEndAfter(img);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          } else {
+            editorRef.current?.appendChild(img);
+          }
+          syncEditorToMarkdown();
+        }
+      }
+    }
+  };
+
+  const insertImage = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        const img = document.createElement('img');
+        img.src = url;
+        img.className = "max-w-full h-auto rounded-lg my-2 shadow-sm border border-gray-100";
+        editorRef.current?.appendChild(img);
+        syncEditorToMarkdown();
+      }
+    };
+    input.click();
   };
 
   const createNewFile = () => {
@@ -385,14 +495,25 @@ export default function App() {
           <div className="flex-1 h-full flex flex-col p-6 border-r border-gray-200 bg-white">
             <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
               <div className="px-6 py-3 border-b border-gray-100 flex items-center justify-between text-xs font-medium text-gray-400 uppercase tracking-widest">
-                <span>Markdown Editor</span>
+                <div className="flex items-center gap-4">
+                  <span>Markdown Editor</span>
+                  <button 
+                    onClick={insertImage}
+                    className="flex items-center gap-1 text-gray-500 hover:text-black transition-colors"
+                  >
+                    <Plus size={12} />
+                    Insert Image
+                  </button>
+                </div>
                 <span>Use --- for new page</span>
               </div>
-              <textarea 
-                value={activeFile.content}
-                onChange={(e) => handleContentChange(e.target.value)}
-                className="flex-1 w-full p-8 resize-none focus:ring-0 border-none font-mono text-sm leading-relaxed text-gray-700 outline-none"
-                placeholder="Write your markdown here..."
+              <div 
+                ref={editorRef}
+                contentEditable
+                onInput={syncEditorToMarkdown}
+                onPaste={handlePaste}
+                className="flex-1 w-full p-8 overflow-y-auto focus:outline-none font-mono text-sm leading-relaxed text-gray-700 whitespace-pre-wrap"
+                spellCheck={false}
               />
             </div>
           </div>
