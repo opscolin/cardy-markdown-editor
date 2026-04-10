@@ -167,14 +167,14 @@ export default function App() {
       title: 'Getting Started',
       content: '# 使用方法\n\n**首先要确保安装 Defuddle**。如果本地没有安装 Defuddle，可以使用 npm 安装（确保你已经安装了 Node.js）：\n\n```\nnpm install -g defuddle\n```\n\n安装完成之后，可以在终端使用 `defuddle` 命令。\n\n---\n\n# 在 AI Agent 中的典型使用方式\n\n在 Claude Code 或 OpenClaw 中，可以直接发送一个 URL，并给出提示词。例如：\n\n```\n读取这个网页内容，并用 Defuddle Skill 提取正文。\n然后生成 Markdown 笔记。\nhttps://example.com/article\n```',
       updatedAt: Date.now(),
-      footerText: 'Cardy Editor',
+      footerText: '',
       showGrid: true,
       fontSize: 'base',
     }
   ]);
   const [activeFileId, setActiveFileId] = useState<string>('1');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportingType, setExportingType] = useState<'pdf' | 'zip' | null>(null);
 
   const activeFile = files.find(f => f.id === activeFileId) || files[0];
 
@@ -183,7 +183,7 @@ export default function App() {
   }, [activeFile.content]);
 
   const exportAllAsPDF = async () => {
-    setIsExporting(true);
+    setExportingType('pdf');
     try {
       const cards = document.querySelectorAll('.exportable-card');
       if (cards.length === 0) return;
@@ -209,12 +209,12 @@ export default function App() {
     } catch (err) {
       console.error('PDF export failed', err);
     } finally {
-      setIsExporting(false);
+      setExportingType(null);
     }
   };
 
   const exportAllAsZip = async () => {
-    setIsExporting(true);
+    setExportingType('zip');
     try {
       const cards = document.querySelectorAll('.exportable-card');
       if (cards.length === 0) return;
@@ -236,7 +236,7 @@ export default function App() {
     } catch (err) {
       console.error('ZIP export failed', err);
     } finally {
-      setIsExporting(false);
+      setExportingType(null);
     }
   };
 
@@ -355,7 +355,7 @@ export default function App() {
       title: 'Untitled Note',
       content: '# New Page\n\nStart writing here...\n\n---\n\n# Page 2\n\nUse `---` to create a new card.',
       updatedAt: Date.now(),
-      footerText: 'Cardy Editor',
+      footerText: '',
       showGrid: true,
       fontSize: 'base',
     };
@@ -455,20 +455,20 @@ export default function App() {
               <div className="flex items-center gap-2 mr-2 border-r border-gray-200 pr-4">
                 <button 
                   onClick={exportAllAsPDF}
-                  disabled={isExporting}
+                  disabled={!!exportingType}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
                   title="Export All as PDF"
                 >
-                  {isExporting ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+                  {exportingType === 'pdf' ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
                   PDF
                 </button>
                 <button 
                   onClick={exportAllAsZip}
-                  disabled={isExporting}
+                  disabled={!!exportingType}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
                   title="Export All as ZIP"
                 >
-                  {isExporting ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />}
+                  {exportingType === 'zip' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />}
                   ZIP
                 </button>
               </div>
