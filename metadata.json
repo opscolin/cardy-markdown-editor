@@ -1,0 +1,5 @@
+{
+  "name": "Cardy Markdown Editor",
+  "description": "A card-style Markdown editor with PPT-style pagination and 3:4 aspect ratio image export.",
+  "requestFramePermissions": []
+}
