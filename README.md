@@ -2,8 +2,8 @@
 
 Cardy 是一个专为精美笔记卡片设计的 Markdown 编辑器。它能够将你的 Markdown 内容实时转换为 3:4 比例的精致卡片，并支持导出为图片、PDF 或 ZIP 包，非常适合社交媒体分享、知识卡片制作和个人笔记存档。
 
-
 <img src="./images/screenshot.webp" width="30%" alt="screenshot"> <img src="./images/card-1.png" width="30%" alt="card-page-01"> <img src="./images/card-2.png" width="30%" alt="card-page-02"> <img src="./images/card-3.png" width="30%" alt="card-page-03">
+
 
 ## 🚀 核心功能
 
