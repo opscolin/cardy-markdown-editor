@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
@@ -161,20 +161,40 @@ const MarkdownCard = ({
 };
 
 export default function App() {
-  const [files, setFiles] = useState<NoteFile[]>([
-    {
-      id: '1',
-      title: 'Getting Started',
-      content: '# 使用方法\n\n**首先要确保安装 Defuddle**。如果本地没有安装 Defuddle，可以使用 npm 安装（确保你已经安装了 Node.js）：\n\n```\nnpm install -g defuddle\n```\n\n安装完成之后，可以在终端使用 `defuddle` 命令。\n\n---\n\n# 在 AI Agent 中的典型使用方式\n\n在 Claude Code 或 OpenClaw 中，可以直接发送一个 URL，并给出提示词。例如：\n\n```\n读取这个网页内容，并用 Defuddle Skill 提取正文。\n然后生成 Markdown 笔记。\nhttps://example.com/article\n```',
-      updatedAt: Date.now(),
-      footerText: '',
-      showGrid: true,
-      fontSize: 'base',
+  const [files, setFiles] = useState<NoteFile[]>(() => {
+    const saved = localStorage.getItem('cardy-files');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved files', e);
+      }
     }
-  ]);
-  const [activeFileId, setActiveFileId] = useState<string>('1');
+    return [
+      {
+        id: '1',
+        title: 'Getting Started',
+        content: '# 使用方法\n\n**首先要确保安装 Defuddle**。如果本地没有安装 Defuddle，可以使用 npm 安装（确保你已经安装了 Node.js）：\n\n```\nnpm install -g defuddle\n```\n\n安装完成之后，可以在终端使用 `defuddle` 命令。\n\n---\n\n# 在 AI Agent 中的典型使用方式\n\n在 Claude Code 或 OpenClaw 中，可以直接发送一个 URL，并给出提示词。例如：\n\n```\n读取这个网页内容，并用 Defuddle Skill 提取正文。\n然后生成 Markdown 笔记。\nhttps://example.com/article\n```',
+        updatedAt: Date.now(),
+        footerText: '',
+        showGrid: true,
+        fontSize: 'base',
+      }
+    ];
+  });
+  const [activeFileId, setActiveFileId] = useState<string>(() => {
+    return localStorage.getItem('cardy-active-file-id') || '1';
+  });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [exportingType, setExportingType] = useState<'pdf' | 'zip' | null>(null);
+  const [lastSaved, setLastSaved] = useState<number | null>(null);
+
+  // Persistence logic
+  useEffect(() => {
+    localStorage.setItem('cardy-files', JSON.stringify(files));
+    localStorage.setItem('cardy-active-file-id', activeFileId);
+    setLastSaved(Date.now());
+  }, [files, activeFileId]);
 
   const activeFile = files.find(f => f.id === activeFileId) || files[0];
 
@@ -306,26 +326,29 @@ export default function App() {
         e.preventDefault();
         const file = items[i].getAsFile();
         if (file) {
-          const url = URL.createObjectURL(file);
-          const img = document.createElement('img');
-          img.src = url;
-          img.className = "max-w-full h-auto rounded-lg my-2 shadow-sm border border-gray-100";
-          
-          // Insert at cursor
-          const selection = window.getSelection();
-          if (selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            range.deleteContents();
-            range.insertNode(img);
-            // Move cursor after image
-            range.setStartAfter(img);
-            range.setEndAfter(img);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          } else {
-            editorRef.current?.appendChild(img);
-          }
-          syncEditorToMarkdown();
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            const img = document.createElement('img');
+            img.src = base64;
+            img.className = "max-w-full h-auto rounded-lg my-2 shadow-sm border border-gray-100";
+            
+            // Insert at cursor
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+              const range = selection.getRangeAt(0);
+              range.deleteContents();
+              range.insertNode(img);
+              range.setStartAfter(img);
+              range.setEndAfter(img);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            } else {
+              editorRef.current?.appendChild(img);
+            }
+            syncEditorToMarkdown();
+          };
+          reader.readAsDataURL(file);
         }
       }
     }
@@ -338,12 +361,16 @@ export default function App() {
     input.onchange = (e: any) => {
       const file = e.target.files[0];
       if (file) {
-        const url = URL.createObjectURL(file);
-        const img = document.createElement('img');
-        img.src = url;
-        img.className = "max-w-full h-auto rounded-lg my-2 shadow-sm border border-gray-100";
-        editorRef.current?.appendChild(img);
-        syncEditorToMarkdown();
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64 = event.target?.result as string;
+          const img = document.createElement('img');
+          img.src = base64;
+          img.className = "max-w-full h-auto rounded-lg my-2 shadow-sm border border-gray-100";
+          editorRef.current?.appendChild(img);
+          syncEditorToMarkdown();
+        };
+        reader.readAsDataURL(file);
       }
     };
     input.click();
@@ -443,11 +470,17 @@ export default function App() {
               value={activeFile.title}
               onChange={(e) => {
                 const newTitle = e.target.value;
-                setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, title: newTitle } : f));
+                setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, title: newTitle, updatedAt: Date.now() } : f));
               }}
               className="text-lg font-semibold bg-transparent border-none focus:ring-0 p-0 placeholder-gray-300 w-64 outline-none"
               placeholder="Note Title..."
             />
+            {lastSaved && (
+              <span className="text-[10px] text-gray-400 flex items-center gap-1 ml-2">
+                <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />
+                Saved
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
