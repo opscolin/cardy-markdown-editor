@@ -22,7 +22,8 @@ import {
   Code,
   FileDown,
   FileArchive,
-  Loader2
+  Loader2,
+  Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -36,6 +37,7 @@ interface NoteFile {
   updatedAt: number;
   footerText?: string;
   showGrid?: boolean;
+  fontSize?: 'xs' | 'sm' | 'base' | 'lg';
 }
 
 // --- Components ---
@@ -45,13 +47,15 @@ const MarkdownCard = ({
   index, 
   total, 
   footerText, 
-  showGrid 
+  showGrid,
+  fontSize = 'base'
 }: { 
   content: string; 
   index: number; 
   total: number;
   footerText?: string;
   showGrid?: boolean;
+  fontSize?: 'xs' | 'sm' | 'base' | 'lg';
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -59,7 +63,7 @@ const MarkdownCard = ({
     if (cardRef.current === null) return;
     
     try {
-      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
+      const dataUrl = await toPng(cardRef.current, { pixelRatio: 2 });
       const link = document.createElement('a');
       link.download = `card-${index + 1}.png`;
       link.href = dataUrl;
@@ -79,31 +83,39 @@ const MarkdownCard = ({
         )}
       >
         {/* Card Content */}
-        <div className="flex-1 overflow-hidden z-10">
+        <div className={cn(
+          "flex-1 overflow-hidden z-10",
+          fontSize === 'xs' && "text-[12px]",
+          fontSize === 'sm' && "text-[14px]",
+          fontSize === 'base' && "text-[15px]",
+          fontSize === 'lg' && "text-[18px]"
+        )}>
           <ReactMarkdown
             urlTransform={(uri) => uri.startsWith('blob:') ? uri : uri}
             components={{
-              h1: ({ children }) => <h1 className="text-2xl font-bold text-gray-900 mb-6 tracking-tight">{children}</h1>,
-              h2: ({ children }) => <h2 className="text-xl font-bold text-gray-800 mb-4 tracking-tight">{children}</h2>,
-              p: ({ children }) => <p className="text-gray-600 leading-relaxed mb-5 text-[15px]">{children}</p>,
+              h1: ({ children }) => <h1 className="font-bold text-gray-900 mb-[0.6em] tracking-tight leading-tight text-[2em]">{children}</h1>,
+              h2: ({ children }) => <h2 className="font-bold text-gray-800 mb-[0.5em] tracking-tight leading-tight text-[1.5em]">{children}</h2>,
+              h3: ({ children }) => <h3 className="font-bold text-gray-800 mb-[0.4em] tracking-tight leading-tight text-[1.25em]">{children}</h3>,
+              h4: ({ children }) => <h4 className="font-bold text-gray-800 mb-[0.4em] tracking-tight leading-tight text-[1.1em]">{children}</h4>,
+              p: ({ children }) => <p className="text-gray-600 leading-relaxed mb-[1em]">{children}</p>,
               strong: ({ children }) => <strong className="font-bold text-gray-900">{children}</strong>,
               img: ({ src, alt }) => (
                 <img 
                   src={src} 
                   alt={alt} 
-                  className="max-w-full h-auto rounded-lg my-4 shadow-md border border-gray-100 mx-auto" 
+                  className="max-w-full h-auto rounded-lg my-[1em] shadow-md border border-gray-100 mx-auto" 
                   referrerPolicy="no-referrer"
                 />
               ),
               pre: ({ children }) => (
-                <div className="bg-[#1e1e1e] rounded-xl my-6 overflow-hidden shadow-lg border border-white/10">
+                <div className="bg-[#1e1e1e] rounded-xl my-[1.2em] overflow-hidden shadow-lg border border-white/10">
                   {/* Mac Style Header */}
                   <div className="flex items-center gap-1.5 px-4 py-3 bg-[#2d2d2d] border-b border-white/5">
                     <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
                     <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
                     <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
                   </div>
-                  <pre className="p-5 m-0 whitespace-pre-wrap break-words">
+                  <pre className="p-5 m-0 whitespace-pre-wrap break-words text-[0.85em]">
                     {children}
                   </pre>
                 </div>
@@ -111,15 +123,15 @@ const MarkdownCard = ({
               code: ({ node, className, children, ...props }: any) => {
                 const isBlock = /language-(\w+)/.test(className || '') || String(children).includes('\n');
                 if (isBlock) {
-                  return <code className={cn("text-gray-300 font-mono text-[13px] leading-relaxed", className)} {...props}>{children}</code>;
+                  return <code className={cn("text-gray-300 font-mono leading-relaxed", className)} {...props}>{children}</code>;
                 }
-                return <code className="bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded text-[13px] font-mono" {...props}>{children}</code>;
+                return <code className="bg-orange-50 text-orange-600 px-[0.4em] py-[0.1em] rounded font-mono text-[0.9em]" {...props}>{children}</code>;
               },
-              ul: ({ children }) => <ul className="list-disc list-outside ml-5 space-y-3 mb-6 text-gray-600 text-[15px]">{children}</ul>,
-              ol: ({ children }) => <ol className="list-decimal list-outside ml-5 space-y-3 mb-6 text-gray-600 text-[15px]">{children}</ol>,
-              li: ({ children }) => <li className="pl-1">{children}</li>,
+              ul: ({ children }) => <ul className="list-disc list-outside ml-[1.2em] space-y-[0.5em] mb-[1em] text-gray-600">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal list-outside ml-[1.2em] space-y-[0.5em] mb-[1em] text-gray-600">{children}</ol>,
+              li: ({ children }) => <li className="pl-[0.2em]">{children}</li>,
               blockquote: ({ children }) => (
-                <blockquote className="border-l-4 border-gray-200 pl-4 italic text-gray-500 my-6">
+                <blockquote className="border-l-[0.25em] border-gray-200 pl-[1em] italic text-gray-500 my-[1.2em]">
                   {children}
                 </blockquote>
               ),
@@ -157,6 +169,7 @@ export default function App() {
       updatedAt: Date.now(),
       footerText: 'Cardy Editor',
       showGrid: true,
+      fontSize: 'base',
     }
   ]);
   const [activeFileId, setActiveFileId] = useState<string>('1');
@@ -183,7 +196,7 @@ export default function App() {
 
       for (let i = 0; i < cards.length; i++) {
         const card = cards[i] as HTMLElement;
-        const dataUrl = await toPng(card, { cacheBust: true, pixelRatio: 2 });
+        const dataUrl = await toPng(card, { pixelRatio: 2 });
         
         if (i > 0) pdf.addPage();
         
@@ -210,7 +223,7 @@ export default function App() {
 
       for (let i = 0; i < cards.length; i++) {
         const card = cards[i] as HTMLElement;
-        const dataUrl = await toPng(card, { cacheBust: true, pixelRatio: 2 });
+        const dataUrl = await toPng(card, { pixelRatio: 2 });
         const base64Data = dataUrl.replace(/^data:image\/(png|jpeg);base64,/, "");
         zip.file(`card-${i + 1}.png`, base64Data, { base64: true });
       }
@@ -344,6 +357,7 @@ export default function App() {
       updatedAt: Date.now(),
       footerText: 'Cardy Editor',
       showGrid: true,
+      fontSize: 'base',
     };
     setFiles([newFile, ...files]);
     setActiveFileId(newFile.id);
@@ -460,6 +474,23 @@ export default function App() {
               </div>
             )}
             <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl mr-2">
+              <div className="flex items-center border-r border-gray-200 pr-1 mr-1">
+                {(['xs', 'sm', 'base', 'lg'] as const).map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => {
+                      setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, fontSize: size } : f));
+                    }}
+                    className={cn(
+                      "w-7 h-7 flex items-center justify-center rounded-lg text-[10px] font-bold transition-all uppercase",
+                      activeFile.fontSize === size ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
+                    )}
+                    title={`Font Size: ${size}`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
               <input 
                 type="text"
                 value={activeFile.footerText || ''}
@@ -499,10 +530,10 @@ export default function App() {
                   <span>Markdown Editor</span>
                   <button 
                     onClick={insertImage}
-                    className="flex items-center gap-1 text-gray-500 hover:text-black transition-colors"
+                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-black transition-colors"
+                    title="Insert Image"
                   >
-                    <Plus size={12} />
-                    Insert Image
+                    <ImageIcon size={16} />
                   </button>
                 </div>
                 <span>Use --- for new page</span>
@@ -528,6 +559,7 @@ export default function App() {
                 total={pages.length} 
                 footerText={activeFile.footerText}
                 showGrid={activeFile.showGrid}
+                fontSize={activeFile.fontSize}
               />
             ))}
             
