@@ -5,6 +5,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
@@ -17,12 +18,14 @@ import {
   ChevronRight, 
   Trash2, 
   FileText,
-  Share2,
+  Github,
   Eye,
   Code,
   FileDown,
   FileArchive,
   Loader2,
+  Play,
+  X,
   Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -92,6 +95,7 @@ const MarkdownCard = ({
         )}>
           <ReactMarkdown
             urlTransform={(uri) => uri.startsWith('blob:') ? uri : uri}
+            remarkPlugins={[remarkGfm]}
             components={{
               h1: ({ children }) => <h1 className="font-bold text-gray-900 mb-[0.6em] tracking-tight leading-tight text-[2em]">{children}</h1>,
               h2: ({ children }) => <h2 className="font-bold text-gray-800 mb-[0.5em] tracking-tight leading-tight text-[1.5em]">{children}</h2>,
@@ -135,6 +139,16 @@ const MarkdownCard = ({
                   {children}
                 </blockquote>
               ),
+              table: ({ children }) => (
+                <div className="overflow-x-auto mb-[1em]">
+                  <table className="w-full border-collapse border border-gray-200 text-left text-[0.9em]">
+                    {children}
+                  </table>
+                </div>
+              ),
+              thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
+              th: ({ children }) => <th className="border border-gray-200 p-[0.6em] font-semibold text-gray-700">{children}</th>,
+              td: ({ children }) => <td className="border border-gray-200 p-[0.6em] text-gray-600">{children}</td>,
             }}
           >
             {content}
@@ -188,6 +202,8 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [exportingType, setExportingType] = useState<'pdf' | 'zip' | null>(null);
   const [lastSaved, setLastSaved] = useState<number | null>(null);
+  const [isPresenting, setIsPresenting] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   // Persistence logic
   useEffect(() => {
@@ -201,6 +217,24 @@ export default function App() {
   const pages = useMemo(() => {
     return activeFile.content.split(/\n\s*---\s*\n/).filter(p => p.trim() !== '');
   }, [activeFile.content]);
+
+  // Keyboard navigation for presentation
+  useEffect(() => {
+    if (!isPresenting) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+        setCurrentSlide(prev => Math.min(prev + 1, pages.length - 1));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        setCurrentSlide(prev => Math.max(prev - 1, 0));
+      } else if (e.key === 'Escape') {
+        setIsPresenting(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPresenting, pages.length]);
 
   const exportAllAsPDF = async () => {
     setExportingType('pdf');
@@ -258,6 +292,16 @@ export default function App() {
     } finally {
       setExportingType(null);
     }
+  };
+
+  const exportAsMarkdown = () => {
+    const blob = new Blob([activeFile.content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${activeFile.title || 'note'}.md`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleContentChange = (newContent: string) => {
@@ -485,24 +529,43 @@ export default function App() {
 
           <div className="flex items-center gap-3">
             {pages.length > 0 && (
-              <div className="flex items-center gap-2 mr-2 border-r border-gray-200 pr-4">
+              <div className="flex items-center gap-1.5 pr-3 border-r border-gray-200">
                 <button 
                   onClick={exportAllAsPDF}
                   disabled={!!exportingType}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
+                  className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-all disabled:opacity-50 relative group"
                   title="Export All as PDF"
                 >
-                  {exportingType === 'pdf' ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-                  PDF
+                  {exportingType === 'pdf' ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} />}
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">PDF Export</span>
                 </button>
                 <button 
                   onClick={exportAllAsZip}
                   disabled={!!exportingType}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
+                  className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-all disabled:opacity-50 relative group"
                   title="Export All as ZIP"
                 >
-                  {exportingType === 'zip' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />}
-                  ZIP
+                  {exportingType === 'zip' ? <Loader2 size={18} className="animate-spin" /> : <FileArchive size={18} />}
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">ZIP Export</span>
+                </button>
+                <button 
+                  onClick={exportAsMarkdown}
+                  className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-all relative group"
+                  title="Export as Markdown"
+                >
+                  <FileText size={18} />
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">Markdown Export</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setCurrentSlide(0);
+                    setIsPresenting(true);
+                  }}
+                  className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-all relative group"
+                  title="Start Presentation"
+                >
+                  <Play size={18} fill="currentColor" />
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">Present</span>
                 </button>
               </div>
             )}
@@ -547,9 +610,15 @@ export default function App() {
                 <Layout size={14} />
               </button>
             </div>
-            <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-500">
-              <Share2 size={20} />
-            </button>
+            <a 
+              href="https://github.com/opscolin/cardy-markdown-editor" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+              title="View on GitHub"
+            >
+              <Github size={20} />
+            </a>
           </div>
         </header>
 
@@ -605,6 +674,86 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {/* Presentation Mode Overlay */}
+      <AnimatePresence>
+        {isPresenting && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 md:p-10"
+          >
+            {/* Close Button */}
+            <button 
+              onClick={() => setIsPresenting(false)}
+              className="absolute top-6 right-6 p-3 text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-all z-50"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Slide Navigation Info */}
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-6 z-50">
+              <button 
+                onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
+                disabled={currentSlide === 0}
+                className="p-2 text-white/40 hover:text-white disabled:opacity-0 transition-all focus:outline-none"
+              >
+                <ChevronLeft size={32} />
+              </button>
+              <span className="text-white/60 font-mono text-sm min-w-[60px] text-center">
+                {currentSlide + 1} / {pages.length}
+              </span>
+              <button 
+                onClick={() => setCurrentSlide(prev => Math.min(pages.length - 1, prev + 1))}
+                disabled={currentSlide === pages.length - 1}
+                className="p-2 text-white/40 hover:text-white disabled:opacity-0 transition-all focus:outline-none"
+              >
+                <ChevronRight size={32} />
+              </button>
+            </div>
+
+            {/* Slide Viewport */}
+            <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlide}
+                  initial={{ y: 50, opacity: 0, scale: 0.95 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: -50, opacity: 0, scale: 0.95 }}
+                  transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                  drag="y"
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  onDragEnd={(_, info) => {
+                    if (info.offset.y < -50) {
+                      setCurrentSlide(prev => Math.min(pages.length - 1, prev + 1));
+                    } else if (info.offset.y > 50) {
+                      setCurrentSlide(prev => Math.max(0, prev - 1));
+                    }
+                  }}
+                  className="cursor-ns-resize h-full flex items-center justify-center w-full"
+                >
+                  <div className="pointer-events-none transform origin-center scale-[0.6] sm:scale-[0.8] md:scale-[1] lg:scale-[1.2] xl:scale-[1.3] transition-transform duration-300">
+                    <MarkdownCard 
+                      content={pages[currentSlide]}
+                      index={currentSlide}
+                      total={pages.length}
+                      footerText={activeFile.footerText}
+                      showGrid={activeFile.showGrid}
+                      fontSize={activeFile.fontSize}
+                    />
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Hint */}
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white/20 text-[10px] font-medium tracking-[0.2em] hidden md:block uppercase">
+              Drag Up/Down, Arrows, or Space to navigate
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
