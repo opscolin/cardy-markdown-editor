@@ -26,10 +26,14 @@ import {
   Loader2,
   Play,
   X,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Sun,
+  Moon,
+  Heart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
+import { SponsorModal } from './components/SponsorModal';
 
 // --- Types ---
 
@@ -43,7 +47,9 @@ interface NoteFile {
   fontSize?: 'xs' | 'sm' | 'base' | 'lg';
 }
 
+
 // --- Components ---
+
 
 const MarkdownCard = ({ 
   content, 
@@ -51,7 +57,8 @@ const MarkdownCard = ({
   total, 
   footerText, 
   showGrid,
-  fontSize = 'base'
+  fontSize = 'base',
+  isDarkMode = false
 }: { 
   content: string; 
   index: number; 
@@ -59,6 +66,7 @@ const MarkdownCard = ({
   footerText?: string;
   showGrid?: boolean;
   fontSize?: 'xs' | 'sm' | 'base' | 'lg';
+  isDarkMode?: boolean;
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -81,8 +89,15 @@ const MarkdownCard = ({
       <div 
         ref={cardRef}
         className={cn(
-          "exportable-card relative w-full aspect-[3/4] bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100 p-8 flex flex-col",
-          showGrid && "bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]"
+          "exportable-card relative w-full aspect-[3/4] shadow-xl rounded-2xl overflow-hidden p-8 flex flex-col transition-all duration-300",
+          isDarkMode 
+            ? "bg-zinc-900 border border-zinc-800 text-zinc-100" 
+            : "bg-white border border-gray-100 text-gray-900",
+          showGrid && (
+            isDarkMode 
+              ? "bg-[radial-gradient(#3f3f46_1px,transparent_1px)] [background-size:20px_20px]"
+              : "bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]"
+          )
         )}
       >
         {/* Card Content */}
@@ -97,29 +112,29 @@ const MarkdownCard = ({
             urlTransform={(uri) => uri.startsWith('blob:') ? uri : uri}
             remarkPlugins={[remarkGfm]}
             components={{
-              h1: ({ children }) => <h1 className="font-bold text-gray-900 mb-[0.6em] tracking-tight leading-tight text-[2em]">{children}</h1>,
-              h2: ({ children }) => <h2 className="font-bold text-gray-800 mb-[0.5em] tracking-tight leading-tight text-[1.5em]">{children}</h2>,
-              h3: ({ children }) => <h3 className="font-bold text-gray-800 mb-[0.4em] tracking-tight leading-tight text-[1.25em]">{children}</h3>,
-              h4: ({ children }) => <h4 className="font-bold text-gray-800 mb-[0.4em] tracking-tight leading-tight text-[1.1em]">{children}</h4>,
-              p: ({ children }) => <p className="text-gray-600 leading-relaxed mb-[1em]">{children}</p>,
-              strong: ({ children }) => <strong className="font-bold text-gray-900">{children}</strong>,
+              h1: ({ children }) => <h1 className={cn("font-bold mb-[0.6em] tracking-tight leading-tight text-[2em] transition-colors", isDarkMode ? "text-white" : "text-gray-900")}>{children}</h1>,
+              h2: ({ children }) => <h2 className={cn("font-bold mb-[0.5em] tracking-tight leading-tight text-[1.5em] transition-colors", isDarkMode ? "text-zinc-100" : "text-gray-800")}>{children}</h2>,
+              h3: ({ children }) => <h3 className={cn("font-bold mb-[0.4em] tracking-tight leading-tight text-[1.25em] transition-colors", isDarkMode ? "text-zinc-200" : "text-gray-800")}>{children}</h3>,
+              h4: ({ children }) => <h4 className={cn("font-bold mb-[0.4em] tracking-tight leading-tight text-[1.1em] transition-colors", isDarkMode ? "text-zinc-200" : "text-gray-800")}>{children}</h4>,
+              p: ({ children }) => <p className={cn("leading-relaxed mb-[1em] transition-colors", isDarkMode ? "text-zinc-300" : "text-gray-600")}>{children}</p>,
+              strong: ({ children }) => <strong className={cn("font-bold transition-colors", isDarkMode ? "text-white" : "text-gray-900")}>{children}</strong>,
               img: ({ src, alt }) => (
                 <img 
                   src={src} 
                   alt={alt} 
-                  className="max-w-full h-auto rounded-lg my-[1em] shadow-md border border-gray-100 mx-auto" 
+                  className={cn("max-w-full h-auto rounded-lg my-[1em] shadow-md mx-auto transition-colors", isDarkMode ? "border border-zinc-800" : "border border-gray-100")} 
                   referrerPolicy="no-referrer"
                 />
               ),
               pre: ({ children }) => (
-                <div className="bg-[#1e1e1e] rounded-xl my-[1.2em] overflow-hidden shadow-lg border border-white/10">
+                <div className={cn("rounded-xl my-[1.2em] overflow-hidden shadow-lg border transition-colors", isDarkMode ? "bg-zinc-950 border-zinc-800/80" : "bg-[#1e1e1e] border-white/10")}>
                   {/* Mac Style Header */}
-                  <div className="flex items-center gap-1.5 px-4 py-3 bg-[#2d2d2d] border-b border-white/5">
+                  <div className={cn("flex items-center gap-1.5 px-4 py-3 border-b transition-colors", isDarkMode ? "bg-zinc-900 border-zinc-800/50" : "bg-[#2d2d2d] border-white/5")}>
                     <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
                     <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
                     <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
                   </div>
-                  <pre className="p-5 m-0 whitespace-pre-wrap break-words text-[0.85em]">
+                  <pre className={cn("p-5 m-0 whitespace-pre-wrap break-words text-[0.85em] transition-colors", isDarkMode ? "text-zinc-300 bg-zinc-950" : "text-gray-300")}>
                     {children}
                   </pre>
                 </div>
@@ -127,28 +142,70 @@ const MarkdownCard = ({
               code: ({ node, className, children, ...props }: any) => {
                 const isBlock = /language-(\w+)/.test(className || '') || String(children).includes('\n');
                 if (isBlock) {
-                  return <code className={cn("text-gray-300 font-mono leading-relaxed", className)} {...props}>{children}</code>;
+                  return <code className={cn("font-mono leading-relaxed transition-colors", isDarkMode ? "text-zinc-300" : "text-gray-300", className)} {...props}>{children}</code>;
                 }
-                return <code className="bg-orange-50 text-orange-600 px-[0.4em] py-[0.1em] rounded font-mono text-[0.9em]" {...props}>{children}</code>;
+                return <code className={cn("px-[0.4em] py-[0.1em] rounded font-mono text-[0.9em] transition-colors", isDarkMode ? "bg-zinc-800 text-zinc-300 border border-zinc-750" : "bg-orange-50 text-orange-600")} {...props}>{children}</code>;
               },
-              ul: ({ children }) => <ul className="list-disc list-outside ml-[1.2em] space-y-[0.5em] mb-[1em] text-gray-600">{children}</ul>,
-              ol: ({ children }) => <ol className="list-decimal list-outside ml-[1.2em] space-y-[0.5em] mb-[1em] text-gray-600">{children}</ol>,
-              li: ({ children }) => <li className="pl-[0.2em]">{children}</li>,
+              ul: ({ className, children }: any) => {
+                const isTaskList = className?.includes('contains-task-list');
+                return (
+                  <ul className={cn(
+                    "list-outside space-y-[0.5em] mb-[1em] transition-colors",
+                    isTaskList ? "list-none ml-0 pl-[0.2em]" : "list-disc ml-[1.2em]",
+                    isDarkMode ? "text-zinc-300" : "text-gray-600",
+                    className
+                  )}>
+                    {children}
+                  </ul>
+                );
+              },
+              ol: ({ className, children }: any) => <ol className={cn("list-decimal list-outside ml-[1.2em] space-y-[0.5em] mb-[1em] transition-colors", isDarkMode ? "text-zinc-300" : "text-gray-600", className)}>{children}</ol>,
+              li: ({ className, children }: any) => {
+                const isTask = className?.includes('task-list-item');
+                return (
+                  <li className={cn(
+                    "pl-[0.2em] transition-colors", 
+                    isTask ? "list-none pl-0 flex items-start gap-2" : ""
+                  )}>
+                    {children}
+                  </li>
+                );
+              },
+              input: ({ type, checked, className, ...props }: any) => {
+                if (type === 'checkbox') {
+                  return (
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled
+                      className={cn(
+                        "mt-1 h-4 w-4 shrink-0 rounded border transition-colors cursor-default accent-blue-500 bg-transparent",
+                        isDarkMode
+                          ? "border-zinc-700 text-blue-500"
+                          : "border-gray-300 text-blue-600",
+                        className
+                      )}
+                      {...props}
+                    />
+                  );
+                }
+                return <input type={type} className={className} {...props} />;
+              },
               blockquote: ({ children }) => (
-                <blockquote className="border-l-[0.25em] border-gray-200 pl-[1em] italic text-gray-500 my-[1.2em]">
+                <blockquote className={cn("border-l-[0.25em] pl-[1em] italic my-[1.2em] transition-colors", isDarkMode ? "border-zinc-700 text-zinc-400" : "border-gray-200 text-gray-500")}>
                   {children}
                 </blockquote>
               ),
               table: ({ children }) => (
                 <div className="overflow-x-auto mb-[1em]">
-                  <table className="w-full border-collapse border border-gray-200 text-left text-[0.9em]">
+                  <table className={cn("w-full border-collapse border text-left text-[0.9em] transition-colors", isDarkMode ? "border-zinc-800" : "border-gray-200")}>
                     {children}
                   </table>
                 </div>
               ),
-              thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
-              th: ({ children }) => <th className="border border-gray-200 p-[0.6em] font-semibold text-gray-700">{children}</th>,
-              td: ({ children }) => <td className="border border-gray-200 p-[0.6em] text-gray-600">{children}</td>,
+              thead: ({ children }) => <thead className={cn("transition-colors", isDarkMode ? "bg-zinc-800/50" : "bg-gray-50")}>{children}</thead>,
+              th: ({ children }) => <th className={cn("border p-[0.6em] font-semibold transition-colors", isDarkMode ? "border-zinc-800 text-zinc-200 bg-zinc-900/50" : "border-gray-200 text-gray-700")}>{children}</th>,
+              td: ({ children }) => <td className={cn("border p-[0.6em] transition-colors", isDarkMode ? "border-zinc-800 text-zinc-350" : "border-gray-200 text-gray-600")}>{children}</td>,
             }}
           >
             {content}
@@ -157,7 +214,10 @@ const MarkdownCard = ({
 
         {/* Card Footer */}
         {footerText && (
-          <div className="mt-auto pt-4 flex justify-center items-center border-t border-gray-50 text-[10px] text-gray-400 font-medium uppercase tracking-widest z-10">
+          <div className={cn(
+            "mt-auto pt-4 flex justify-center items-center border-t text-[10px] font-medium uppercase tracking-widest z-10 transition-colors",
+            isDarkMode ? "border-zinc-800 text-zinc-500" : "border-gray-50 text-gray-400"
+          )}>
             <span>{footerText}</span>
           </div>
         )}
@@ -165,7 +225,10 @@ const MarkdownCard = ({
       
       <button 
         onClick={handleExport}
-        className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 px-4 py-2 bg-black text-white rounded-full text-xs font-medium shadow-lg hover:scale-105 active:scale-95"
+        className={cn(
+          "opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium shadow-lg hover:scale-105 active:scale-95",
+          isDarkMode ? "bg-white text-zinc-950 hover:bg-zinc-200" : "bg-black text-white hover:bg-zinc-900"
+        )}
       >
         <Download size={14} />
         Export Page {index + 1}
@@ -188,7 +251,7 @@ export default function App() {
       {
         id: '1',
         title: 'Getting Started',
-        content: '# 使用方法\n\n**首先要确保安装 Defuddle**。如果本地没有安装 Defuddle，可以使用 npm 安装（确保你已经安装了 Node.js）：\n\n```\nnpm install -g defuddle\n```\n\n安装完成之后，可以在终端使用 `defuddle` 命令。\n\n---\n\n# 在 AI Agent 中的典型使用方式\n\n在 Claude Code 或 OpenClaw 中，可以直接发送一个 URL，并给出提示词。例如：\n\n```\n读取这个网页内容，并用 Defuddle Skill 提取正文。\n然后生成 Markdown 笔记。\nhttps://example.com/article\n```',
+        content: '## Cardy应用介绍\n\n`一个基于文件维度拆分成多个卡片形式的 Markdown 编辑器`。创建一个文件，其中的内容按分页或幻灯片形式展示。每个页面或幻灯片均独立采用 Markdown 格式撰写。\n\n+ 可导出为 PDF 文件，或打包为图片列表\n\n+ 每张图片对应一个幻灯片或分页支持`在线预览`。\n\n+ 支持`暗黑/亮色`模式切换。\n\n\n\n> 2026-05-20 新增了个`打赏功能`，如果您觉得对您有帮助，也欢迎请杯咖啡哦~  \n\n---\n\n# 支持Markdown语法\n\n1、支持基本的Markdown语法\n\n2、支持Mac风格代码块\n\n```python\nprint("I like Cardy!")\n```\n3、支持插入图片\n\n3.1、插入粘贴板中的图片(即复制然后粘贴)\n\n3.2、支持 `![xx](image-addr)` 图片语法插入\n\n4、支持ToDo任务\n\n- [ ] 任务1\n- [x] 任务2\n',
         updatedAt: Date.now(),
         footerText: '',
         showGrid: true,
@@ -204,6 +267,10 @@ export default function App() {
   const [lastSaved, setLastSaved] = useState<number | null>(null);
   const [isPresenting, setIsPresenting] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isDonateOpen, setIsDonateOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('cardy-dark-mode') === 'true';
+  });
 
   // Persistence logic
   useEffect(() => {
@@ -211,6 +278,10 @@ export default function App() {
     localStorage.setItem('cardy-active-file-id', activeFileId);
     setLastSaved(Date.now());
   }, [files, activeFileId]);
+
+  useEffect(() => {
+    localStorage.setItem('cardy-dark-mode', String(isDarkMode));
+  }, [isDarkMode]);
 
   const activeFile = files.find(f => f.id === activeFileId) || files[0];
 
@@ -444,23 +515,35 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-[#F9F9F7] text-gray-900 font-sans overflow-hidden">
+    <div className={cn(
+      "flex h-screen font-sans overflow-hidden transition-colors duration-300",
+      isDarkMode ? "bg-zinc-950 text-zinc-100" : "bg-[#F9F9F7] text-gray-900"
+    )}>
       {/* Sidebar */}
       <motion.aside 
         initial={false}
         animate={{ width: sidebarOpen ? 280 : 0, opacity: sidebarOpen ? 1 : 0 }}
-        className="bg-white border-r border-gray-200 flex flex-col overflow-hidden"
+        className={cn(
+          "border-r flex flex-col overflow-hidden transition-colors duration-300",
+          isDarkMode ? "bg-zinc-900 border-zinc-800" : "bg-white border-gray-200"
+        )}
       >
         <div className="p-6 flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white">
+            <div className={cn(
+              "w-8 h-8 rounded-lg flex items-center justify-center text-white transition-colors duration-250",
+              isDarkMode ? "bg-zinc-700" : "bg-black"
+            )}>
               <Layout size={18} />
             </div>
             Cardy
           </h1>
           <button 
             onClick={createNewFile}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-black"
+            className={cn(
+              "p-2 rounded-lg transition-colors",
+              isDarkMode ? "hover:bg-zinc-800 text-zinc-400 hover:text-white" : "p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-black"
+            )}
           >
             <Plus size={20} />
           </button>
@@ -474,11 +557,11 @@ export default function App() {
               className={cn(
                 "group flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all",
                 activeFileId === file.id 
-                  ? "bg-gray-100 text-black shadow-sm" 
-                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                  ? (isDarkMode ? "bg-zinc-850 text-white shadow-md shadow-black/10" : "bg-gray-100 text-black shadow-sm") 
+                  : (isDarkMode ? "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900")
               )}
             >
-              <FileText size={18} className={activeFileId === file.id ? "text-black" : "text-gray-400"} />
+              <FileText size={18} className={activeFileId === file.id ? (isDarkMode ? "text-white" : "text-black") : "text-gray-400"} />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">{file.title || 'Untitled'}</div>
                 <div className="text-[10px] opacity-60 uppercase tracking-wider">
@@ -490,7 +573,10 @@ export default function App() {
                   e.stopPropagation();
                   deleteFile(file.id);
                 }}
-                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-gray-200 rounded-md transition-all text-gray-400 hover:text-red-500"
+                className={cn(
+                  "opacity-0 group-hover:opacity-100 p-1.5 rounded-md transition-all",
+                  isDarkMode ? "hover:bg-zinc-700 text-zinc-500 hover:text-red-400" : "hover:bg-gray-200 text-gray-400 hover:text-red-500"
+                )}
               >
                 <Trash2 size={14} />
               </button>
@@ -502,11 +588,19 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 relative">
         {/* Header */}
-        <header className="h-16 border-b border-gray-200 bg-white/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-10">
+        <header className={cn(
+          "h-16 border-b flex items-center justify-between px-6 sticky top-0 z-10 transition-colors duration-300 backdrop-blur-md",
+          isDarkMode 
+            ? "bg-zinc-900/80 border-zinc-800 text-white" 
+            : "bg-white/80 border-gray-200 text-black"
+        )}>
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"
+              className={cn(
+                "p-2 rounded-lg transition-colors",
+                isDarkMode ? "hover:bg-zinc-800 text-zinc-400" : "hover:bg-gray-100 text-gray-500"
+              )}
             >
               {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
             </button>
@@ -516,11 +610,17 @@ export default function App() {
                 const newTitle = e.target.value;
                 setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, title: newTitle, updatedAt: Date.now() } : f));
               }}
-              className="text-lg font-semibold bg-transparent border-none focus:ring-0 p-0 placeholder-gray-300 w-64 outline-none"
+              className={cn(
+                "text-lg font-semibold bg-transparent border-none focus:ring-0 p-0 w-64 outline-none transition-colors",
+                isDarkMode ? "text-white placeholder-zinc-700" : "text-black placeholder-gray-300"
+              )}
               placeholder="Note Title..."
             />
             {lastSaved && (
-              <span className="text-[10px] text-gray-400 flex items-center gap-1 ml-2">
+              <span className={cn(
+                "text-[10px] flex items-center gap-1 ml-2 transition-colors",
+                isDarkMode ? "text-zinc-500" : "text-gray-400"
+              )}>
                 <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />
                 Saved
               </span>
@@ -529,11 +629,17 @@ export default function App() {
 
           <div className="flex items-center gap-3">
             {pages.length > 0 && (
-              <div className="flex items-center gap-1.5 pr-3 border-r border-gray-200">
+              <div className={cn(
+                "flex items-center gap-1.5 pr-3 border-r transition-colors",
+                isDarkMode ? "border-zinc-800" : "border-gray-200"
+              )}>
                 <button 
                   onClick={exportAllAsPDF}
                   disabled={!!exportingType}
-                  className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-all disabled:opacity-50 relative group"
+                  className={cn(
+                    "p-2 rounded-lg transition-all disabled:opacity-50 relative group",
+                    isDarkMode ? "hover:bg-zinc-800 text-red-400" : "hover:bg-red-50 text-red-600"
+                  )}
                   title="Export All as PDF"
                 >
                   {exportingType === 'pdf' ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} />}
@@ -542,7 +648,10 @@ export default function App() {
                 <button 
                   onClick={exportAllAsZip}
                   disabled={!!exportingType}
-                  className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-all disabled:opacity-50 relative group"
+                  className={cn(
+                    "p-2 rounded-lg transition-all disabled:opacity-50 relative group",
+                    isDarkMode ? "hover:bg-zinc-800 text-blue-400" : "hover:bg-blue-50 text-blue-600"
+                  )}
                   title="Export All as ZIP"
                 >
                   {exportingType === 'zip' ? <Loader2 size={18} className="animate-spin" /> : <FileArchive size={18} />}
@@ -550,7 +659,10 @@ export default function App() {
                 </button>
                 <button 
                   onClick={exportAsMarkdown}
-                  className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-all relative group"
+                  className={cn(
+                    "p-2 rounded-lg transition-all relative group",
+                    isDarkMode ? "hover:bg-zinc-800 text-green-400" : "hover:bg-green-50 text-green-600"
+                  )}
                   title="Export as Markdown"
                 >
                   <FileText size={18} />
@@ -561,7 +673,10 @@ export default function App() {
                     setCurrentSlide(0);
                     setIsPresenting(true);
                   }}
-                  className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-all relative group"
+                  className={cn(
+                    "p-2 rounded-lg transition-all relative group",
+                    isDarkMode ? "hover:bg-zinc-800 text-indigo-400" : "hover:bg-indigo-50 text-indigo-600"
+                  )}
                   title="Start Presentation"
                 >
                   <Play size={18} fill="currentColor" />
@@ -569,8 +684,14 @@ export default function App() {
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl mr-2">
-              <div className="flex items-center border-r border-gray-200 pr-1 mr-1">
+            <div className={cn(
+              "flex items-center gap-2 p-1 rounded-xl mr-2 transition-colors",
+              isDarkMode ? "bg-zinc-855 border border-zinc-800" : "bg-gray-100"
+            )}>
+              <div className={cn(
+                "flex items-center border-r pr-1 mr-1 transition-colors",
+                isDarkMode ? "border-zinc-800" : "border-gray-200"
+              )}>
                 {(['xs', 'sm', 'base', 'lg'] as const).map((size) => (
                   <button
                     key={size}
@@ -579,7 +700,9 @@ export default function App() {
                     }}
                     className={cn(
                       "w-7 h-7 flex items-center justify-center rounded-lg text-[10px] font-bold transition-all uppercase",
-                      activeFile.fontSize === size ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
+                      activeFile.fontSize === size 
+                        ? (isDarkMode ? "bg-zinc-700 text-white shadow-sm" : "bg-white text-black shadow-sm") 
+                        : (isDarkMode ? "text-zinc-500 hover:text-zinc-300" : "text-gray-400 hover:text-gray-600")
                     )}
                     title={`Font Size: ${size}`}
                   >
@@ -594,7 +717,10 @@ export default function App() {
                   const newText = e.target.value;
                   setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, footerText: newText } : f));
                 }}
-                className="text-[10px] bg-transparent border-none focus:ring-0 p-1 w-24 uppercase tracking-wider placeholder-gray-400"
+                className={cn(
+                  "text-[10px] bg-transparent border-none focus:ring-0 p-1 w-24 uppercase tracking-wider transition-colors outline-none",
+                  isDarkMode ? "text-zinc-200 placeholder-zinc-650" : "text-gray-800 placeholder-gray-400"
+                )}
                 placeholder="Footer Text..."
               />
               <button 
@@ -603,18 +729,58 @@ export default function App() {
                 }}
                 className={cn(
                   "p-1.5 rounded-lg transition-all",
-                  activeFile.showGrid ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
+                  activeFile.showGrid 
+                    ? (isDarkMode ? "bg-zinc-700 text-white shadow-sm" : "bg-white text-black shadow-sm") 
+                    : (isDarkMode ? "text-zinc-400 hover:text-gray-600" : "text-gray-400 hover:text-gray-600")
                 )}
                 title="Toggle Grid"
               >
                 <Layout size={14} />
               </button>
             </div>
+
+            <button 
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={cn(
+                "p-2 rounded-lg transition-colors duration-200 relative group",
+                isDarkMode 
+                  ? "hover:bg-zinc-800 text-amber-400 hover:text-amber-300" 
+                  : "hover:bg-gray-100 text-gray-500 hover:text-amber-500"
+              )}
+              title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">
+                {isDarkMode ? "Light Mode" : "Dark Mode"}
+              </span>
+            </button>
+
+            <button 
+              onClick={() => {
+                setIsDonateOpen(true);
+              }}
+              className={cn(
+                "p-2 rounded-lg transition-all duration-200 relative group",
+                isDarkMode 
+                  ? "hover:bg-zinc-800 text-pink-400 hover:text-pink-300" 
+                  : "hover:bg-pink-50 text-pink-500 hover:text-pink-600"
+              )}
+              title="Donate / Tip"
+            >
+              <Heart size={20} className="text-pink-500 fill-pink-500/10 group-hover:scale-110 group-hover:fill-pink-500 transition-all duration-300" />
+              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">
+                Donate / Tip
+              </span>
+            </button>
+
             <a 
               href="https://github.com/opscolin/cardy-markdown-editor" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+              className={cn(
+                "p-2 rounded-lg transition-colors",
+                isDarkMode ? "hover:bg-zinc-800 text-zinc-400 hover:text-zinc-250" : "p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+               )}
               title="View on GitHub"
             >
               <Github size={20} />
@@ -625,14 +791,26 @@ export default function App() {
         {/* Workspace */}
         <div className="flex-1 overflow-hidden relative flex flex-row">
           {/* Editor Pane */}
-          <div className="flex-1 h-full flex flex-col p-6 border-r border-gray-200 bg-white">
-            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-              <div className="px-6 py-3 border-b border-gray-100 flex items-center justify-between text-xs font-medium text-gray-400 uppercase tracking-widest">
+          <div className={cn(
+            "flex-1 h-full flex flex-col p-6 border-r transition-colors duration-300",
+            isDarkMode ? "bg-zinc-950 border-zinc-800" : "bg-white border-gray-200"
+          )}>
+            <div className={cn(
+              "flex-1 rounded-2xl shadow-sm border overflow-hidden flex flex-col transition-colors duration-300",
+              isDarkMode ? "bg-zinc-900 border-zinc-800" : "bg-white border-gray-200"
+            )}>
+              <div className={cn(
+                "px-6 py-3 border-b flex items-center justify-between text-xs font-medium uppercase tracking-widest transition-colors",
+                isDarkMode ? "border-zinc-800 text-zinc-500 bg-zinc-900/40" : "border-gray-100 text-gray-400 bg-white"
+              )}>
                 <div className="flex items-center gap-4">
                   <span>Markdown Editor</span>
                   <button 
                     onClick={insertImage}
-                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-black transition-colors"
+                    className={cn(
+                      "p-1.5 rounded-lg transition-colors",
+                      isDarkMode ? "hover:bg-zinc-805 text-zinc-400 hover:text-zinc-200" : "hover:bg-gray-100 text-gray-500 hover:text-black"
+                    )}
                     title="Insert Image"
                   >
                     <ImageIcon size={16} />
@@ -645,14 +823,20 @@ export default function App() {
                 contentEditable
                 onInput={syncEditorToMarkdown}
                 onPaste={handlePaste}
-                className="flex-1 w-full p-8 overflow-y-auto focus:outline-none font-mono text-sm leading-relaxed text-gray-700 whitespace-pre-wrap"
+                className={cn(
+                  "flex-1 w-full p-8 overflow-y-auto focus:outline-none font-mono text-sm leading-relaxed whitespace-pre-wrap transition-colors duration-300",
+                  isDarkMode ? "bg-zinc-900 text-zinc-200" : "bg-white text-gray-700"
+                )}
                 spellCheck={false}
               />
             </div>
           </div>
 
           {/* Preview Pane */}
-          <div className="flex-1 h-full overflow-y-auto p-8 flex flex-col items-center gap-12 bg-[#F9F9F7]">
+          <div className={cn(
+            "flex-1 h-full overflow-y-auto p-8 flex flex-col items-center gap-12 transition-colors duration-300",
+            isDarkMode ? "bg-zinc-950" : "bg-[#F9F9F7]"
+          )}>
             {pages.map((page, idx) => (
               <MarkdownCard 
                 key={idx} 
@@ -662,11 +846,12 @@ export default function App() {
                 footerText={activeFile.footerText}
                 showGrid={activeFile.showGrid}
                 fontSize={activeFile.fontSize}
+                isDarkMode={isDarkMode}
               />
             ))}
             
             {pages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+              <div className={cn("flex flex-col items-center justify-center h-full transition-colors", isDarkMode ? "text-zinc-600" : "text-gray-400")}>
                 <Type size={48} strokeWidth={1} className="mb-4" />
                 <p>No content to preview</p>
               </div>
@@ -741,6 +926,7 @@ export default function App() {
                       footerText={activeFile.footerText}
                       showGrid={activeFile.showGrid}
                       fontSize={activeFile.fontSize}
+                      isDarkMode={isDarkMode}
                     />
                   </div>
                 </motion.div>
@@ -754,6 +940,15 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Donation/Tipping Modal */}
+      <SponsorModal
+        isOpen={isDonateOpen}
+        onClose={() => setIsDonateOpen(false)}
+        isDarkMode={isDarkMode}
+        projectName="Cardy"
+        authorName="作者"
+      />
     </div>
   );
 }
