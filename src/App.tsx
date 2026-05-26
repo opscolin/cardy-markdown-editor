@@ -29,7 +29,9 @@ import {
   Image as ImageIcon,
   Sun,
   Moon,
-  Heart
+  Heart,
+  Menu,
+  Sliders
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -85,7 +87,7 @@ const MarkdownCard = ({
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 group w-[400px] shrink-0">
+    <div className="flex flex-col items-center gap-4 group w-full max-w-[400px] shrink-0">
       <div 
         ref={cardRef}
         className={cn(
@@ -262,7 +264,26 @@ export default function App() {
   const [activeFileId, setActiveFileId] = useState<string>(() => {
     return localStorage.getItem('cardy-active-file-id') || '1';
   });
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isDrawer, setIsDrawer] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      return width < 768 || (width <= 1024 && height > width);
+    }
+    return false;
+  });
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isInitialDrawer = width < 768 || (width <= 1024 && height > width);
+      if (isInitialDrawer) return false;
+      return width >= 1350;
+    }
+    return true;
+  });
+  const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
+  const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
   const [exportingType, setExportingType] = useState<'pdf' | 'zip' | null>(null);
   const [lastSaved, setLastSaved] = useState<number | null>(null);
   const [isPresenting, setIsPresenting] = useState(false);
@@ -282,6 +303,39 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('cardy-dark-mode', String(isDarkMode));
   }, [isDarkMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let prevWidth = window.innerWidth;
+    const handleResize = () => {
+      const currentWidth = window.innerWidth;
+      const currentHeight = window.innerHeight;
+      const isCurrentPortrait = currentHeight > currentWidth;
+      const nextIsDrawer = currentWidth < 768 || (currentWidth <= 1024 && isCurrentPortrait);
+      
+      setIsDrawer(nextIsDrawer);
+
+      // Auto close sidebar below 1350px for wider workspace; auto open above 1350px (only on non-drawer desktop)
+      if (!nextIsDrawer) {
+        if (prevWidth >= 1350 && currentWidth < 1350) {
+          setSidebarOpen(false);
+        } else if (prevWidth < 1350 && currentWidth >= 1350) {
+          setSidebarOpen(true);
+        }
+      } else {
+        // If transitioning into drawer mode, we generally want the sidebar closed
+        const prevIsDrawer = prevWidth < 768 || (prevWidth <= 1024 && window.innerHeight > prevWidth);
+        if (!prevIsDrawer) {
+          setSidebarOpen(false);
+        }
+      }
+      prevWidth = currentWidth;
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const activeFile = files.find(f => f.id === activeFileId) || files[0];
 
@@ -519,12 +573,35 @@ export default function App() {
       "flex h-screen font-sans overflow-hidden transition-colors duration-300",
       isDarkMode ? "bg-zinc-950 text-zinc-100" : "bg-[#F9F9F7] text-gray-900"
     )}>
+      {/* Sidebar Backdrop on Mobile */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSidebarOpen(false)}
+            className={cn(
+              "fixed inset-0 z-40 bg-black/40 backdrop-blur-xs",
+              isDrawer ? "block" : "hidden"
+            )}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
       <motion.aside 
         initial={false}
-        animate={{ width: sidebarOpen ? 280 : 0, opacity: sidebarOpen ? 1 : 0 }}
+        animate={
+          isDrawer
+            ? { x: sidebarOpen ? 0 : -280, opacity: sidebarOpen ? 1 : 0, width: 280 }
+            : { width: sidebarOpen ? 280 : 0, opacity: sidebarOpen ? 1 : 0, x: 0 }
+        }
+        transition={{ type: "tween", duration: 0.2 }}
         className={cn(
-          "border-r flex flex-col overflow-hidden transition-colors duration-300",
+          "border-r flex flex-col overflow-hidden transition-colors duration-300 shrink-0",
+          isDrawer ? "fixed" : "static",
+          "inset-y-0 left-0 z-50 h-full",
           isDarkMode ? "bg-zinc-900 border-zinc-800" : "bg-white border-gray-200"
         )}
       >
@@ -538,22 +615,38 @@ export default function App() {
             </div>
             Cardy
           </h1>
-          <button 
-            onClick={createNewFile}
-            className={cn(
-              "p-2 rounded-lg transition-colors",
-              isDarkMode ? "hover:bg-zinc-800 text-zinc-400 hover:text-white" : "p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-black"
-            )}
-          >
-            <Plus size={20} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={createNewFile}
+              className={cn(
+                "p-2 rounded-lg transition-colors",
+                isDarkMode ? "hover:bg-zinc-800 text-zinc-400 hover:text-white" : "p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-black"
+              )}
+            >
+              <Plus size={20} />
+            </button>
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className={cn(
+                "p-2 text-zinc-400 hover:text-zinc-650",
+                isDrawer ? "block" : "hidden"
+              )}
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 space-y-1">
           {files.map(file => (
             <div 
               key={file.id}
-              onClick={() => setActiveFileId(file.id)}
+              onClick={() => {
+                setActiveFileId(file.id);
+                if (isDrawer) {
+                  setSidebarOpen(false);
+                }
+              }}
               className={cn(
                 "group flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all",
                 activeFileId === file.id 
@@ -589,12 +682,12 @@ export default function App() {
       <main className="flex-1 flex flex-col min-w-0 relative">
         {/* Header */}
         <header className={cn(
-          "h-16 border-b flex items-center justify-between px-6 sticky top-0 z-10 transition-colors duration-300 backdrop-blur-md",
+          "h-16 border-b flex items-center justify-between px-4 sm:px-6 sticky top-0 z-10 transition-colors duration-300 backdrop-blur-md",
           isDarkMode 
             ? "bg-zinc-900/80 border-zinc-800 text-white" 
             : "bg-white/80 border-gray-200 text-black"
         )}>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:p-0">
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className={cn(
@@ -602,7 +695,7 @@ export default function App() {
                 isDarkMode ? "hover:bg-zinc-800 text-zinc-400" : "hover:bg-gray-100 text-gray-500"
               )}
             >
-              {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+              <Menu size={20} />
             </button>
             <input 
               value={activeFile.title}
@@ -611,14 +704,14 @@ export default function App() {
                 setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, title: newTitle, updatedAt: Date.now() } : f));
               }}
               className={cn(
-                "text-lg font-semibold bg-transparent border-none focus:ring-0 p-0 w-64 outline-none transition-colors",
+                "text-base sm:text-lg font-semibold bg-transparent border-none focus:ring-0 p-0 w-28 xs:w-36 min-[400px]:w-44 md:w-44 min-[1400px]:w-64 focus:w-64 outline-none transition-all duration-200",
                 isDarkMode ? "text-white placeholder-zinc-700" : "text-black placeholder-gray-300"
               )}
               placeholder="Note Title..."
             />
             {lastSaved && (
               <span className={cn(
-                "text-[10px] flex items-center gap-1 ml-2 transition-colors",
+                "text-[10px] items-center gap-1 ml-2 transition-colors hidden xl:flex",
                 isDarkMode ? "text-zinc-500" : "text-gray-400"
               )}>
                 <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />
@@ -627,118 +720,169 @@ export default function App() {
             )}
           </div>
 
-          <div className="flex items-center gap-3">
-            {pages.length > 0 && (
-              <div className={cn(
-                "flex items-center gap-1.5 pr-3 border-r transition-colors",
-                isDarkMode ? "border-zinc-800" : "border-gray-200"
-              )}>
-                <button 
-                  onClick={exportAllAsPDF}
-                  disabled={!!exportingType}
-                  className={cn(
-                    "p-2 rounded-lg transition-all disabled:opacity-50 relative group",
-                    isDarkMode ? "hover:bg-zinc-800 text-red-400" : "hover:bg-red-50 text-red-600"
-                  )}
-                  title="Export All as PDF"
-                >
-                  {exportingType === 'pdf' ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} />}
-                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">PDF Export</span>
-                </button>
-                <button 
-                  onClick={exportAllAsZip}
-                  disabled={!!exportingType}
-                  className={cn(
-                    "p-2 rounded-lg transition-all disabled:opacity-50 relative group",
-                    isDarkMode ? "hover:bg-zinc-800 text-blue-400" : "hover:bg-blue-50 text-blue-600"
-                  )}
-                  title="Export All as ZIP"
-                >
-                  {exportingType === 'zip' ? <Loader2 size={18} className="animate-spin" /> : <FileArchive size={18} />}
-                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">ZIP Export</span>
-                </button>
-                <button 
-                  onClick={exportAsMarkdown}
-                  className={cn(
-                    "p-2 rounded-lg transition-all relative group",
-                    isDarkMode ? "hover:bg-zinc-800 text-green-400" : "hover:bg-green-50 text-green-600"
-                  )}
-                  title="Export as Markdown"
-                >
-                  <FileText size={18} />
-                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">Markdown Export</span>
-                </button>
-                <button 
-                  onClick={() => {
-                    setCurrentSlide(0);
-                    setIsPresenting(true);
-                  }}
-                  className={cn(
-                    "p-2 rounded-lg transition-all relative group",
-                    isDarkMode ? "hover:bg-zinc-800 text-indigo-400" : "hover:bg-indigo-50 text-indigo-600"
-                  )}
-                  title="Start Presentation"
-                >
-                  <Play size={18} fill="currentColor" />
-                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">Present</span>
-                </button>
-              </div>
-            )}
+          <div className="flex items-center gap-1 min-[1400px]:gap-3">
+            {/* Desktop Only Actions Panel */}
             <div className={cn(
-              "flex items-center gap-2 p-1 rounded-xl mr-2 transition-colors",
-              isDarkMode ? "bg-zinc-855 border border-zinc-800" : "bg-gray-100"
+              isDrawer ? "hidden" : "flex",
+              "items-center gap-2 min-[1400px]:gap-3"
             )}>
-              <div className={cn(
-                "flex items-center border-r pr-1 mr-1 transition-colors",
-                isDarkMode ? "border-zinc-800" : "border-gray-200"
-              )}>
-                {(['xs', 'sm', 'base', 'lg'] as const).map((size) => (
-                  <button
-                    key={size}
+              {pages.length > 0 && (
+                <div className={cn(
+                  "flex items-center gap-1 min-[1400px]:gap-1.5 pr-1.5 min-[1400px]:pr-3 border-r transition-colors",
+                  isDarkMode ? "border-zinc-800" : "border-gray-200"
+                )}>
+                  <button 
+                    onClick={exportAllAsPDF}
+                    disabled={!!exportingType}
+                    className={cn(
+                      "p-1.5 min-[1400px]:p-2 rounded-lg transition-all disabled:opacity-50 relative group",
+                      isDarkMode ? "hover:bg-zinc-800 text-red-400" : "hover:bg-red-50 text-red-600"
+                    )}
+                    title="Export All as PDF"
+                  >
+                    {exportingType === 'pdf' ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">PDF Export</span>
+                  </button>
+                  <button 
+                    onClick={exportAllAsZip}
+                    disabled={!!exportingType}
+                    className={cn(
+                      "p-1.5 min-[1400px]:p-2 rounded-lg transition-all disabled:opacity-50 relative group",
+                      isDarkMode ? "hover:bg-zinc-800 text-blue-400" : "hover:bg-blue-50 text-blue-600"
+                    )}
+                    title="Export All as ZIP"
+                  >
+                    {exportingType === 'zip' ? <Loader2 size={16} className="animate-spin" /> : <FileArchive size={16} />}
+                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">ZIP Export</span>
+                  </button>
+                  <button 
+                    onClick={exportAsMarkdown}
+                    className={cn(
+                      "p-1.5 min-[1400px]:p-2 rounded-lg transition-all relative group",
+                      isDarkMode ? "hover:bg-zinc-800 text-green-400" : "hover:bg-green-50 text-green-600"
+                    )}
+                    title="Export as Markdown"
+                  >
+                    <FileText size={16} />
+                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">Markdown Export</span>
+                  </button>
+                  <button 
                     onClick={() => {
-                      setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, fontSize: size } : f));
+                      setCurrentSlide(0);
+                      setIsPresenting(true);
                     }}
                     className={cn(
-                      "w-7 h-7 flex items-center justify-center rounded-lg text-[10px] font-bold transition-all uppercase",
-                      activeFile.fontSize === size 
-                        ? (isDarkMode ? "bg-zinc-700 text-white shadow-sm" : "bg-white text-black shadow-sm") 
-                        : (isDarkMode ? "text-zinc-500 hover:text-zinc-300" : "text-gray-400 hover:text-gray-600")
+                      "p-1.5 min-[1400px]:p-2 rounded-lg transition-all relative group",
+                      isDarkMode ? "hover:bg-zinc-800 text-indigo-400" : "hover:bg-indigo-50 text-indigo-600"
                     )}
-                    title={`Font Size: ${size}`}
+                    title="Start Presentation"
                   >
-                    {size}
+                    <Play size={16} fill="currentColor" />
+                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">Present</span>
                   </button>
-                ))}
+                </div>
+              )}
+              <div className={cn(
+                "flex items-center gap-1 min-[1400px]:gap-2 p-1 rounded-xl mr-1 min-[1400px]:mr-2 transition-colors",
+                isDarkMode ? "bg-zinc-855 border border-zinc-800" : "bg-gray-100"
+              )}>
+                <div className={cn(
+                  "flex items-center border-r pr-0.5 min-[1400px]:pr-1 mr-0.5 min-[1400px]:mr-1 transition-colors",
+                  isDarkMode ? "border-zinc-800" : "border-gray-200"
+                )}>
+                  {(['xs', 'sm', 'base', 'lg'] as const).map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => {
+                        setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, fontSize: size } : f));
+                      }}
+                      className={cn(
+                        "w-6 h-6 min-[1400px]:w-7 min-[1400px]:h-7 flex items-center justify-center rounded-lg text-[10px] font-bold transition-all uppercase",
+                        activeFile.fontSize === size 
+                          ? (isDarkMode ? "bg-zinc-700 text-white shadow-sm" : "bg-white text-black shadow-sm") 
+                          : (isDarkMode ? "text-zinc-500 hover:text-zinc-300" : "text-gray-400 hover:text-gray-600")
+                      )}
+                      title={`Font Size: ${size}`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+                <input 
+                  type="text"
+                  value={activeFile.footerText || ''}
+                  onChange={(e) => {
+                    const newText = e.target.value;
+                    setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, footerText: newText } : f));
+                  }}
+                  className={cn(
+                    "text-[10px] bg-transparent border-none focus:ring-0 p-1 w-14 focus:w-24 min-[1400px]:w-24 uppercase tracking-wider transition-all outline-none",
+                    isDarkMode ? "text-zinc-200 placeholder-zinc-650" : "text-gray-800 placeholder-gray-400"
+                  )}
+                  placeholder="Footer Text..."
+                />
+                <button 
+                  onClick={() => {
+                    setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, showGrid: !f.showGrid } : f));
+                  }}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-all",
+                    activeFile.showGrid 
+                      ? (isDarkMode ? "bg-zinc-700 text-white shadow-sm" : "bg-white text-black shadow-sm") 
+                      : (isDarkMode ? "text-zinc-400 hover:text-gray-600" : "text-gray-400 hover:text-gray-600")
+                  )}
+                  title="Toggle Grid"
+                >
+                  <Layout size={14} />
+                </button>
               </div>
-              <input 
-                type="text"
-                value={activeFile.footerText || ''}
-                onChange={(e) => {
-                  const newText = e.target.value;
-                  setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, footerText: newText } : f));
-                }}
-                className={cn(
-                  "text-[10px] bg-transparent border-none focus:ring-0 p-1 w-24 uppercase tracking-wider transition-colors outline-none",
-                  isDarkMode ? "text-zinc-200 placeholder-zinc-650" : "text-gray-800 placeholder-gray-400"
-                )}
-                placeholder="Footer Text..."
-              />
+
               <button 
                 onClick={() => {
-                  setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, showGrid: !f.showGrid } : f));
+                  setIsDonateOpen(true);
                 }}
                 className={cn(
-                  "p-1.5 rounded-lg transition-all",
-                  activeFile.showGrid 
-                    ? (isDarkMode ? "bg-zinc-700 text-white shadow-sm" : "bg-white text-black shadow-sm") 
-                    : (isDarkMode ? "text-zinc-400 hover:text-gray-600" : "text-gray-400 hover:text-gray-600")
+                  "p-2 rounded-lg transition-all duration-200 relative group",
+                  isDarkMode 
+                    ? "hover:bg-zinc-800 text-pink-400 hover:text-pink-300" 
+                    : "hover:bg-pink-50 text-pink-500 hover:text-pink-600"
                 )}
-                title="Toggle Grid"
+                title="Donate / Tip"
               >
-                <Layout size={14} />
+                <Heart size={20} className="text-pink-500 fill-pink-500/10 group-hover:scale-110 group-hover:fill-pink-500 transition-all duration-300" />
+                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">
+                  Donate / Tip
+                </span>
               </button>
+
+              <a 
+                href="https://github.com/opscolin/cardy-markdown-editor" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className={cn(
+                  "p-2 rounded-lg transition-colors",
+                  isDarkMode ? "hover:bg-zinc-800 text-zinc-400 hover:text-zinc-250" : "p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+                )}
+                title="View on GitHub"
+              >
+                <Github size={20} />
+              </a>
             </div>
 
+            {/* Mobile Only Settings Drawer Trigger */}
+            <button 
+              onClick={() => setIsMobileSettingsOpen(true)}
+              className={cn(
+                isDrawer ? "block" : "hidden",
+                "p-2 rounded-lg transition-colors duration-250",
+                isDarkMode ? "hover:bg-zinc-800 text-zinc-400 hover:text-white" : "hover:bg-gray-100 text-gray-500 hover:text-black"
+              )}
+              title="Card options & exports"
+            >
+              <Sliders size={20} />
+            </button>
+
+            {/* Light/Dark Mode Toggle (Visible Everywhere for easy access) */}
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
               className={cn(
@@ -754,53 +898,23 @@ export default function App() {
                 {isDarkMode ? "Light Mode" : "Dark Mode"}
               </span>
             </button>
-
-            <button 
-              onClick={() => {
-                setIsDonateOpen(true);
-              }}
-              className={cn(
-                "p-2 rounded-lg transition-all duration-200 relative group",
-                isDarkMode 
-                  ? "hover:bg-zinc-800 text-pink-400 hover:text-pink-300" 
-                  : "hover:bg-pink-50 text-pink-500 hover:text-pink-600"
-              )}
-              title="Donate / Tip"
-            >
-              <Heart size={20} className="text-pink-500 fill-pink-500/10 group-hover:scale-110 group-hover:fill-pink-500 transition-all duration-300" />
-              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">
-                Donate / Tip
-              </span>
-            </button>
-
-            <a 
-              href="https://github.com/opscolin/cardy-markdown-editor" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={cn(
-                "p-2 rounded-lg transition-colors",
-                isDarkMode ? "hover:bg-zinc-800 text-zinc-400 hover:text-zinc-250" : "p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
-               )}
-              title="View on GitHub"
-            >
-              <Github size={20} />
-            </a>
           </div>
         </header>
 
         {/* Workspace */}
-        <div className="flex-1 overflow-hidden relative flex flex-row">
+        <div className="flex-1 h-[calc(100vh-4rem)] overflow-hidden relative flex flex-row">
           {/* Editor Pane */}
           <div className={cn(
-            "flex-1 h-full flex flex-col p-6 border-r transition-colors duration-300",
-            isDarkMode ? "bg-zinc-950 border-zinc-800" : "bg-white border-gray-200"
+            "flex-1 h-full flex flex-col p-3 sm:p-6 border-r transition-all duration-300 overflow-hidden",
+            isDarkMode ? "bg-zinc-950 border-zinc-800" : "bg-white border-gray-200",
+            isDrawer ? (mobileTab === 'editor' ? "flex" : "hidden") : "flex"
           )}>
             <div className={cn(
               "flex-1 rounded-2xl shadow-sm border overflow-hidden flex flex-col transition-colors duration-300",
               isDarkMode ? "bg-zinc-900 border-zinc-800" : "bg-white border-gray-200"
             )}>
               <div className={cn(
-                "px-6 py-3 border-b flex items-center justify-between text-xs font-medium uppercase tracking-widest transition-colors",
+                "px-4 sm:px-6 py-3 border-b flex items-center justify-between text-xs font-medium uppercase tracking-widest transition-colors",
                 isDarkMode ? "border-zinc-800 text-zinc-500 bg-zinc-900/40" : "border-gray-100 text-gray-400 bg-white"
               )}>
                 <div className="flex items-center gap-4">
@@ -816,7 +930,7 @@ export default function App() {
                     <ImageIcon size={16} />
                   </button>
                 </div>
-                <span>Use --- for new page</span>
+                <span className="hidden sm:inline">Use --- for new page</span>
               </div>
               <div 
                 ref={editorRef}
@@ -824,7 +938,7 @@ export default function App() {
                 onInput={syncEditorToMarkdown}
                 onPaste={handlePaste}
                 className={cn(
-                  "flex-1 w-full p-8 overflow-y-auto focus:outline-none font-mono text-sm leading-relaxed whitespace-pre-wrap transition-colors duration-300",
+                  "flex-1 w-full p-4 pb-28 sm:p-8 overflow-y-auto focus:outline-none font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-wrap transition-colors duration-300",
                   isDarkMode ? "bg-zinc-900 text-zinc-200" : "bg-white text-gray-700"
                 )}
                 spellCheck={false}
@@ -834,20 +948,25 @@ export default function App() {
 
           {/* Preview Pane */}
           <div className={cn(
-            "flex-1 h-full overflow-y-auto p-8 flex flex-col items-center gap-12 transition-colors duration-300",
-            isDarkMode ? "bg-zinc-950" : "bg-[#F9F9F7]"
+            "flex-1 h-full overflow-y-auto overflow-x-hidden pt-10 pb-28 px-4 sm:p-8 flex flex-col items-center gap-12 transition-all duration-300 md:pb-8",
+            isDarkMode ? "bg-zinc-950" : "bg-[#F9F9F7]",
+            isDrawer ? (mobileTab === 'preview' ? "flex" : "hidden") : "flex"
           )}>
             {pages.map((page, idx) => (
-              <MarkdownCard 
+              <div 
                 key={idx} 
-                content={page} 
-                index={idx} 
-                total={pages.length} 
-                footerText={activeFile.footerText}
-                showGrid={activeFile.showGrid}
-                fontSize={activeFile.fontSize}
-                isDarkMode={isDarkMode}
-              />
+                className="scale-[0.74] min-[370px]:scale-[0.78] min-[400px]:scale-[0.84] sm:scale-100 origin-top mt-0 mb-[-130px] min-[370px]:mb-[-100px] min-[400px]:mb-[-70px] sm:mb-0 transition-transform duration-250 w-full flex justify-center"
+              >
+                <MarkdownCard 
+                  content={page} 
+                  index={idx} 
+                  total={pages.length} 
+                  footerText={activeFile.footerText}
+                  showGrid={activeFile.showGrid}
+                  fontSize={activeFile.fontSize}
+                  isDarkMode={isDarkMode}
+                />
+              </div>
             ))}
             
             {pages.length === 0 && (
@@ -938,6 +1057,255 @@ export default function App() {
               Drag Up/Down, Arrows, or Space to navigate
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Bottom Toggle for Mobile */}
+      <div className={cn(
+        isDrawer ? "flex" : "hidden",
+        "fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200/60 dark:border-zinc-800/80 p-1.5 rounded-full shadow-lg gap-1"
+      )}>
+        <button
+          onClick={() => setMobileTab('editor')}
+          className={cn(
+            "flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition-all select-none",
+            mobileTab === 'editor'
+              ? (isDarkMode ? "bg-zinc-800 text-white shadow-md" : "bg-black text-white shadow-md")
+              : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-850 dark:hover:text-zinc-100"
+          )}
+        >
+          <Code size={14} />
+          <span>编辑</span>
+        </button>
+        <button
+          onClick={() => setMobileTab('preview')}
+          className={cn(
+            "flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition-all select-none",
+            mobileTab === 'preview'
+              ? (isDarkMode ? "bg-zinc-800 text-white shadow-md" : "bg-black text-white shadow-md")
+              : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-855 dark:hover:text-zinc-100"
+          )}
+        >
+          <Eye size={14} />
+          <span>预览</span>
+        </button>
+      </div>
+
+      {/* Mobile Drawer Settings Sheet */}
+      <AnimatePresence>
+        {isMobileSettingsOpen && (
+          <div className={cn(
+            isDrawer ? "flex" : "hidden",
+            "fixed inset-0 z-[110] items-end"
+          )}>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileSettingsOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+            />
+            {/* Drawer Body */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className={cn(
+                "relative w-full rounded-t-[2rem] p-6 pb-10 border-t shadow-2xl z-10 max-h-[85vh] overflow-y-auto flex flex-col",
+                isDarkMode 
+                  ? "bg-zinc-900 border-zinc-800 text-zinc-100" 
+                  : "bg-white border-zinc-150 text-zinc-900"
+              )}
+            >
+              <div className="w-12 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-6 shrink-0" />
+
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-base font-bold tracking-tight">卡片个性化设置</h3>
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-semibold mt-0.5 tracking-wider">Card Customization & Export</p>
+                </div>
+                <button 
+                  onClick={() => setIsMobileSettingsOpen(false)}
+                  className={cn(
+                    "p-1.5 rounded-full transition-colors",
+                    isDarkMode ? "hover:bg-zinc-800 text-zinc-400" : "hover:bg-gray-100 text-gray-400"
+                  )}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* 1. Font Sizes */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">正文字体大小 (Font Size)</label>
+                  <div className={cn(
+                    "flex p-1 rounded-xl gap-1 border",
+                    isDarkMode ? "bg-zinc-950 border-zinc-800" : "bg-gray-50 border-gray-150"
+                  )}>
+                    {(['xs', 'sm', 'base', 'lg'] as const).map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => {
+                          setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, fontSize: size } : f));
+                        }}
+                        className={cn(
+                          "flex-1 py-2 rounded-lg text-xs font-bold transition-all uppercase text-center",
+                          activeFile.fontSize === size 
+                            ? (isDarkMode ? "bg-zinc-800 text-white shadow" : "bg-white text-black shadow") 
+                            : (isDarkMode ? "text-zinc-500 hover:text-zinc-300" : "text-gray-400 hover:text-gray-600")
+                        )}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Grid Toggle & Footer text */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">页脚文本 (Footer)</label>
+                    <input 
+                      type="text"
+                      value={activeFile.footerText || ''}
+                      onChange={(e) => {
+                        const newText = e.target.value;
+                        setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, footerText: newText } : f));
+                      }}
+                      className={cn(
+                        "w-full text-xs font-medium bg-transparent border rounded-xl py-2 px-3 uppercase tracking-wider outline-none transition-all",
+                        isDarkMode 
+                          ? "border-zinc-800 text-zinc-200 bg-zinc-950 focus:border-zinc-700" 
+                          : "border-gray-200 text-gray-800 bg-gray-50 focus:border-gray-300"
+                      )}
+                      placeholder="CARD FOOTER..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">网格底纹 (Grid)</label>
+                    <button 
+                      onClick={() => {
+                        setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, showGrid: !f.showGrid } : f));
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-bold transition-all",
+                        activeFile.showGrid 
+                          ? (isDarkMode ? "bg-zinc-800 border-zinc-700 text-white shadow-sm" : "bg-white border-zinc-200 text-black shadow-sm") 
+                          : (isDarkMode ? "text-zinc-400 border-zinc-800 hover:bg-zinc-800/40" : "text-gray-400 border-gray-150 hover:bg-gray-100")
+                      )}
+                    >
+                      <Layout size={14} />
+                      <span>{activeFile.showGrid ? "显示网格" : "隐藏网格"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Export tools */}
+                {pages.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">文档及卡片导出 (Export Options)</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button 
+                        onClick={() => {
+                          setIsMobileSettingsOpen(false);
+                          exportAllAsPDF();
+                        }}
+                        disabled={!!exportingType}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all text-[10px] font-bold",
+                          isDarkMode 
+                            ? "bg-zinc-950/40 border-zinc-800 hover:border-zinc-700 text-red-400" 
+                            : "bg-red-50/20 border-red-100 hover:border-red-200 text-red-600"
+                        )}
+                      >
+                        {exportingType === 'pdf' ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+                        <span>PDF 导出</span>
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          setIsMobileSettingsOpen(false);
+                          exportAllAsZip();
+                        }}
+                        disabled={!!exportingType}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all text-[10px] font-bold",
+                          isDarkMode 
+                            ? "bg-zinc-950/40 border-zinc-800 hover:border-zinc-700 text-blue-400" 
+                            : "bg-blue-50/20 border-blue-100 hover:border-blue-200 text-blue-600"
+                        )}
+                      >
+                        {exportingType === 'zip' ? <Loader2 size={16} className="animate-spin" /> : <FileArchive size={16} />}
+                        <span>图片打包</span>
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          setIsMobileSettingsOpen(false);
+                          exportAsMarkdown();
+                        }}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all text-[10px] font-bold",
+                          isDarkMode 
+                            ? "bg-zinc-950/40 border-zinc-800 hover:border-zinc-700 text-green-400" 
+                            : "bg-green-50/20 border-green-100 hover:border-green-200 text-green-600"
+                        )}
+                      >
+                        <FileText size={16} />
+                        <span>MD 源码</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Controls */}
+                <div className="space-y-2 pt-2 border-t border-zinc-200/50 dark:border-zinc-800/80">
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Presentation Mode */}
+                    {pages.length > 0 && (
+                      <button 
+                        onClick={() => {
+                          setIsMobileSettingsOpen(false);
+                          setCurrentSlide(0);
+                          setIsPresenting(true);
+                        }}
+                        className={cn(
+                          "flex items-center justify-center gap-2 p-3 rounded-xl border transition-all text-xs font-bold",
+                          isDarkMode 
+                            ? "bg-zinc-800 border-zinc-700 text-indigo-400" 
+                            : "bg-indigo-50 border-indigo-150 text-indigo-600"
+                        )}
+                      >
+                        <Play size={14} fill="currentColor" />
+                        <span>幻灯放映</span>
+                      </button>
+                    )}
+
+                    {/* Tip button */}
+                    <button 
+                      onClick={() => {
+                        setIsMobileSettingsOpen(false);
+                        setIsDonateOpen(true);
+                      }}
+                      className={cn(
+                        "flex items-center justify-center gap-2 p-3 rounded-xl border transition-all text-xs font-bold",
+                        isDarkMode 
+                          ? "bg-zinc-800 border-zinc-700 text-pink-400" 
+                          : "bg-pink-50 border-pink-150 text-pink-600"
+                      )}
+                    >
+                      <Heart size={14} className="fill-pink-500/10 text-pink-500" />
+                      <span>打赏咖啡</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
