@@ -36,6 +36,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { SponsorModal } from './components/SponsorModal';
+// @ts-ignore
+import cardyIcon from './assets/images/cardy_icon_1780455883241.png';
 
 // --- Types ---
 
@@ -607,12 +609,12 @@ export default function App() {
       >
         <div className="p-6 flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
-            <div className={cn(
-              "w-8 h-8 rounded-lg flex items-center justify-center text-white transition-colors duration-250",
-              isDarkMode ? "bg-zinc-700" : "bg-black"
-            )}>
-              <Layout size={18} />
-            </div>
+            <img 
+              src={cardyIcon} 
+              alt="Cardy Logo" 
+              className="w-8 h-8 rounded-lg object-cover shadow-xs border border-zinc-200/10"
+              referrerPolicy="no-referrer"
+            />
             Cardy
           </h1>
           <div className="flex items-center gap-1">
