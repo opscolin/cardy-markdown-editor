@@ -214,13 +214,13 @@ const MarkdownCard = ({
           </ReactMarkdown>
         </div>
 
-        {/* Card Footer */}
+        {/* Card Watermark */}
         {footerText && (
           <div className={cn(
-            "mt-auto pt-4 flex justify-center items-center border-t text-[10px] font-medium uppercase tracking-widest z-10 transition-colors",
-            isDarkMode ? "border-zinc-800 text-zinc-500" : "border-gray-50 text-gray-400"
+            "absolute bottom-4 right-4 z-20 text-[9px] font-semibold tracking-widest select-none pointer-events-none transition-colors",
+            isDarkMode ? "text-white/20" : "text-black/20"
           )}>
-            <span>{footerText}</span>
+            {footerText}
           </div>
         )}
       </div>
@@ -808,7 +808,7 @@ export default function App() {
                     </button>
                   ))}
                 </div>
-                <input 
+                 <input 
                   type="text"
                   value={activeFile.footerText || ''}
                   onChange={(e) => {
@@ -816,10 +816,10 @@ export default function App() {
                     setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, footerText: newText } : f));
                   }}
                   className={cn(
-                    "text-[10px] bg-transparent border-none focus:ring-0 p-1 w-14 focus:w-24 min-[1400px]:w-24 uppercase tracking-wider transition-all outline-none",
+                    "text-[10px] bg-transparent border-none focus:ring-0 p-1 w-14 focus:w-24 min-[1400px]:w-24 tracking-wider transition-all outline-none",
                     isDarkMode ? "text-zinc-200 placeholder-zinc-650" : "text-gray-800 placeholder-gray-400"
                   )}
-                  placeholder="Footer Text..."
+                  placeholder="Watermark..."
                 />
                 <button 
                   onClick={() => {
@@ -1164,10 +1164,10 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 2. Grid Toggle & Footer text */}
+                {/* 2. Grid Toggle & Watermark text */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">页脚文本 (Footer)</label>
+                    <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">卡片水印 (Watermark)</label>
                     <input 
                       type="text"
                       value={activeFile.footerText || ''}
@@ -1176,12 +1176,12 @@ export default function App() {
                         setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, footerText: newText } : f));
                       }}
                       className={cn(
-                        "w-full text-xs font-medium bg-transparent border rounded-xl py-2 px-3 uppercase tracking-wider outline-none transition-all",
+                        "w-full text-xs font-medium bg-transparent border rounded-xl py-2 px-3 tracking-wider outline-none transition-all",
                         isDarkMode 
                           ? "border-zinc-800 text-zinc-200 bg-zinc-950 focus:border-zinc-700" 
                           : "border-gray-200 text-gray-800 bg-gray-50 focus:border-gray-300"
                       )}
-                      placeholder="CARD FOOTER..."
+                      placeholder="WATERMARK..."
                     />
                   </div>
 
