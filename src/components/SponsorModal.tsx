@@ -3,10 +3,8 @@ import { X, Eye, Loader2, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
-// @ts-ignore
-import wechatDefaultImage from '../assets/wechat.png';
-// @ts-ignore
-import alipayDefaultImage from '../assets/alipay.png';
+const wechatDefaultImage = '/wechat.png';
+const alipayDefaultImage = '/alipay.png';
 
 // --- Inner Sub-component for QR Code with Laser Animation ---
 
