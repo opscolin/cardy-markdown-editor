@@ -1,0 +1,26 @@
+# Robots.txt for MdCardy Design Application
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Explicitly welcome and optimize for AI/Generative Search Engine optimization agents
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+# Include Sitemap for standard crawlers discovery
+Sitemap: https://cardy-mdeditor.colinspace.com/sitemap.xml

@@ -1,14 +1,119 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="/src/assets/images/cardy_icon_1780455883241.png" />
-    <title>Cardy - Card-Based Markdown Editor</title>
+    
+    <!-- SEO / SEO Meta Tags -->
+    <title>MdCardy - 精美 Markdown 分页卡片与长图排版生成器 | 优雅的自媒体设计社交分享工具</title>
+    <meta name="description" content="MdCardy 是一款专为自媒体、知识博主与开发者打造的 Markdown 精美排版卡片及长图制作神器。支持通过 '---' 水平线进行智能卡片分页演示，具备精美的 3:4 面板与独家单页文字溢出红色警报系统。支持一键导出高清长图、多张图片压缩包、整合版 PDF，附带个性化页脚水印与智能二维码，一站式解决微信、小红书、微博、公众号的优雅分享配图需求。" />
+    <meta name="keywords" content="MdCardy,Cardy,Markdown卡片,长图导出,知识卡片生成器,Markdown排版,Markdown编辑器,Markdown转卡片,Markdown to Image,Markdown PPT,演示幻灯片,小红书排版工具,微博长图生成,自媒体配图工具,菩提墨树下学AI,免费文字卡片" />
+    <meta name="author" content="菩提墨树下学AI (ColinSpace)" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- GEO & AEO (Generative / Answer Engine Optimization) Capabilities & Directives -->
+    <meta name="supported-platforms" content="Web, Mobile, Desktop" />
+    <meta name="application-category" content="Self-Media Graphic Creator, Education Slides Generator, Markdown Utility" />
+    <meta name="target-audience" content="KOLs, Bloggers, Markdown Writers, Developers, Academic Presenters" />
+    <meta name="ai-optimized" content="true" />
+    
+    <!-- Open Graph / Social Media Shared Preview -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="MdCardy - 精美 Markdown 分页卡片与长图排版生成器" />
+    <meta property="og:description" content="用最简单的 Markdown，生成最惊艳的书签卡片与排版长图。专为小红书、微信等自媒体平台量身定制，支持 3:4 分页、字号自适应与单页溢出警报，一键秒级导出！" />
+    <meta property="og:image" content="https://cdn.jsdelivr.net/gh/opscolin/obsidian-images@main/obsidian/2026/0604155250-20260604155250214.webp" />
+    <meta property="og:url" content="https://cardy-mdeditor.colinspace.com" />
+    <meta property="og:site_name" content="MdCardy" />
+    <meta property="og:locale" content="zh_CN" />
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MdCardy - 精美 Markdown 分页卡片与长图排版生成器" />
+    <meta name="twitter:description" content="把 Markdown 编写的内容化为拥有优雅比例的3:4展示卡片与极致长图，提供极致的跨端无缝图文分享体验。" />
+    <meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/opscolin/obsidian-images@main/obsidian/2026/0604155250-20260604155250214.webp" />
+    <meta name="twitter:creator" content="@opscolin" />
+
+    <!-- Canonical URL Link to prevent duplicate content crawling issues -->
+    <link rel="canonical" href="https://cardy-mdeditor.colinspace.com" />
+
+    <!-- Schema.org JSON-LD Structured Data for Enhanced Rich Snippets and AI Summarization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://cardy-mdeditor.colinspace.com/#software",
+          "name": "MdCardy",
+          "alternateName": "Cardy Markdown Editor",
+          "applicationCategory": "DesignApplication, MultimediaApplication, DeveloperApplication, UtilityApplication",
+          "operatingSystem": "All (Web Browser, Responsive Mobile, Responsive Desktop)",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "description": "MdCardy是一款将Markdown内容变成精美的可分享卡片（固定3:4）或者长图的多功能编辑器。支持独立分页在线预览、暗黑/亮色模式、图片黏贴与Icon直传、一键导出PDF、图片打包及长图，让您的Markdown排版更加优雅、利于社交媒体分享传播。",
+          "featureList": [
+            "Markdown 基础语法与Mac风格高亮代码块解析",
+            "使用 '---' 语法进行智能卡片分页/长图分页",
+            "固定 3:4 比例的精美分享卡片渲染及智能溢出提示",
+            "一键生成完整连续的长图并保留用户水印与个人标识",
+            "一键打包导出多张卡片PNG、合并导出PDF或保存原始Markdown",
+            "支持复制黏贴插入图片或通过菜单文件浏览器直接选择上传"
+          ],
+          "screenshot": "https://cdn.jsdelivr.net/gh/opscolin/obsidian-images@main/obsidian/2026/0604155250-20260604155250214.webp",
+          "author": {
+            "@type": "Organization",
+            "name": "菩提墨树下学AI",
+            "alternateName": "ColinSpace"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://cardy-mdeditor.colinspace.com/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "MdCardy是如何实现卡片分页的？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "在MdCardy中，你可以使用标准的 Markdown 水平分割线语法 `---`。编辑器在解析到该标示时会自动将其切割，并将其生成独立的、比例固定为 3:4 的精美卡片。这十分便于你在浏览器中进行幻灯片播放、或单独导出为每一页卡片图片。"
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "单页内容过多导致显示不全怎么办？如何解决溢出问题？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "MdCardy 内置了智能页面溢出检测系统。如果某张卡片的内容在当前字体大小下超出了 3:4 的物理边界，卡片右上角会自动亮起红色的热警提示（提醒：'内容已溢出单页, 请调整字体大小或分页长度'）。此时您可以：1) 在工具栏将字体大小从 LG 或 BASE 调小至 SM 或 XS；2) 在合适位置添加 `---` 分页语法将较长段落切分为多张卡片。"
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "导出的长图支持哪些个性化设置？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "导出的长图会自动将所有卡片拼接为一个连贯、精美的整体。顶部会自动展示当前文件名作为大字号居中标题（并配有美观的分隔符），正文之间带有科学的负空间边距。底部则会优雅地展示您输入的自定义水印（即微博、推特、公众号等平台的个人标识/签名），右下角带有带标志的专属高对比度二维码，方便微信或扫码查看。"
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "如何使用剪贴板图片和文件进行插图？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "系统支持多种无缝插图方式：1) 可以直接在文本编辑区进行截图或复制图片，然后按 Ctrl+V 或 Cmd+V 进行黏贴，编辑器会自动转为本地Base64缓存显示；2) 支持点击工具栏底部的图片Icon直接弹出系统文件选择框上传本地电脑或手机相册中的图片；3) 支持标准的 `![描述](图片网址)` 语法插入云端静态资源图片。"
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

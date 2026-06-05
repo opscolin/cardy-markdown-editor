@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useLayoutEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toPng } from 'html-to-image';
@@ -26,16 +26,18 @@ import {
   Loader2,
   Play,
   X,
-  Image as ImageIcon,
+  ImageIcon,
   Sun,
   Moon,
   Heart,
   Menu,
-  Sliders
+  Sliders,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { SponsorModal } from './components/SponsorModal';
+import QRCode from 'qrcode';
 // @ts-ignore
 import cardyIcon from './assets/images/cardy_icon_1780455883241.png';
 
@@ -73,6 +75,30 @@ const MarkdownCard = ({
   isDarkMode?: boolean;
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    const container = contentRef.current;
+    if (!container) return;
+
+    const checkOverflow = () => {
+      // Small margin of error to prevent floating point jitter
+      const extra = container.scrollHeight - container.clientHeight;
+      setIsOverflowing(extra > 1.5);
+    };
+
+    const handle = requestAnimationFrame(checkOverflow);
+    
+    // Set up ResizeObserver to handle layout size changes perfectly
+    const observer = new ResizeObserver(checkOverflow);
+    observer.observe(container);
+
+    return () => {
+      cancelAnimationFrame(handle);
+      observer.disconnect();
+    };
+  }, [content, fontSize]);
 
   const handleExport = async () => {
     if (cardRef.current === null) return;
@@ -101,17 +127,34 @@ const MarkdownCard = ({
             isDarkMode 
               ? "bg-[radial-gradient(#3f3f46_1px,transparent_1px)] [background-size:20px_20px]"
               : "bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]"
+          ),
+          isOverflowing && (
+            isDarkMode 
+              ? "ring-2 ring-red-500/55 border-red-500/55 shadow-[0_0_15px_rgba(239,68,68,0.25)]" 
+              : "ring-2 ring-red-500/55 border-red-500/55 shadow-[0_0_15px_rgba(239,68,68,0.18)]"
           )
         )}
       >
+        {/* Overflow Crimson Alert Badge */}
+        {isOverflowing && (
+          <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/25 text-red-500 text-[10px] font-bold shadow-xs select-none animate-pulse">
+            <AlertTriangle size={11} className="shrink-0" />
+            <span>内容已溢出单页, 请调整字体大小或分页长度</span>
+          </div>
+        )}
+
         {/* Card Content */}
-        <div className={cn(
-          "flex-1 overflow-hidden z-10",
-          fontSize === 'xs' && "text-[12px]",
-          fontSize === 'sm' && "text-[14px]",
-          fontSize === 'base' && "text-[15px]",
-          fontSize === 'lg' && "text-[18px]"
-        )}>
+        <div 
+          ref={contentRef}
+          className={cn(
+            "flex-1 overflow-hidden z-10",
+            fontSize === 'xs' && "text-[12px]",
+            fontSize === 'sm' && "text-[14px]",
+            fontSize === 'base' && "text-[15px]",
+            fontSize === 'lg' && "text-[18px]"
+          )}
+          style={{ lineHeight: '1.625' }}
+        >
           <ReactMarkdown
             urlTransform={(uri) => uri.startsWith('blob:') ? uri : uri}
             remarkPlugins={[remarkGfm]}
@@ -254,8 +297,8 @@ export default function App() {
     return [
       {
         id: '1',
-        title: 'Getting Started',
-        content: '## Cardy应用介绍\n\n`一个基于文件维度拆分成多个卡片形式的 Markdown 编辑器`。创建一个文件，其中的内容按分页或幻灯片形式展示。每个页面或幻灯片均独立采用 Markdown 格式撰写。\n\n+ 可导出为 PDF 文件，或打包为图片列表\n\n+ 每张图片对应一个幻灯片或分页支持`在线预览`。\n\n+ 支持`暗黑/亮色`模式切换。\n\n\n\n> 2026-05-20 新增了个`打赏功能`，如果您觉得对您有帮助，也欢迎请杯咖啡哦~  \n\n---\n\n# 支持Markdown语法\n\n1、支持基本的Markdown语法\n\n2、支持Mac风格代码块\n\n```python\nprint("I like Cardy!")\n```\n3、支持插入图片\n\n3.1、插入粘贴板中的图片(即复制然后粘贴)\n\n3.2、支持 `![xx](image-addr)` 图片语法插入\n\n4、支持ToDo任务\n\n- [ ] 任务1\n- [x] 任务2\n',
+        title: 'MdCardy应用',
+        content: '\n\n> 一款将Markdown内容变成精美的`可分享卡片（固定3:4）`或者`长图`的应用。\n\n创建一个文件，文件使用\`---\`进行分页，文件内容基于Markdown书写，最终可生成精美的分享卡片图片或者是长图。并支持在线播放预览。\n\n+ 支持导出为`长图`\n+ 可导出为 PDF 文件，或图片列表打包导出或者原始Markdown\n+ 支持分页`在线预览`。\n+ 支持`暗黑/亮色`模式切换。\n+ 支持页脚添加`水印`；导出长图中使用水印作为`个人标识`\n\n---\n\n## 支持Markdown语法\n\n1、支持基本的Markdown语法\n2、支持Mac风格代码块\n\n```python\nprint("I like Cardy!")\n```\n\n3、支持插入图片\n3.1、插入粘贴板中的图片(即复制后粘贴)\n3.2、支持通过`图片Icon`直接上传图片\n3.3、支持 `![xx](image-addr)` 图片语法插入\n\n--- \n\n4、支持ToDo任务\n\n- [ ] 任务1\n- [x] 任务2\n\n## 使用建议\n\n0、使用`---` 进行分页\n1、标题建议最大为二级标题 `## title`\n2、保持默认`BASE`字体大小即可。\n\n>从小字体到大字体调整可能会收到`页面溢出告警`，别紧张在大字体下重新调整分页即可\n\n3、顶部按钮图标上`悬停`就知道其功能\n4、通过添加`水印`打上你的`专属标记`\n\n---\n\n5、如果觉得功能不错，欢迎点击`❤️` 请杯咖啡\n6、专属功能`免费定制`，欢迎关注公众号`菩提墨树下学AI`\n\n![](https://cdn.jsdelivr.net/gh/opscolin/obsidian-images@main/obsidian/2026/0604155250-20260604155250214.webp)\n',
         updatedAt: Date.now(),
         footerText: '',
         showGrid: true,
@@ -286,7 +329,7 @@ export default function App() {
   });
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
-  const [exportingType, setExportingType] = useState<'pdf' | 'zip' | null>(null);
+  const [exportingType, setExportingType] = useState<'pdf' | 'zip' | 'long-image' | null>(null);
   const [lastSaved, setLastSaved] = useState<number | null>(null);
   const [isPresenting, setIsPresenting] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -294,6 +337,34 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('cardy-dark-mode') === 'true';
   });
+  const longCardRef = useRef<HTMLDivElement>(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+
+  // Generate QR Code dynamically using current URL
+  useEffect(() => {
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://cardy-mdeditor.colinspace.com';
+    QRCode.toDataURL(currentUrl, {
+      margin: 1,
+      width: 250,
+      errorCorrectionLevel: 'H', // Use High error correction (handles up to 30% area obstruction)
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    }).then((url) => {
+      setQrCodeDataUrl(url);
+    }).catch((err) => {
+      console.error('Failed to generate QR Code', err);
+    });
+  }, [activeFileId]);
+
+  const formatDate = (date: Date) => {
+    const day = date.getDate();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  };
 
   // Persistence logic
   useEffect(() => {
@@ -416,6 +487,23 @@ export default function App() {
       link.click();
     } catch (err) {
       console.error('ZIP export failed', err);
+    } finally {
+      setExportingType(null);
+    }
+  };
+
+  const exportAllAsLongImage = async () => {
+    setExportingType('long-image');
+    try {
+      if (longCardRef.current === null) return;
+      
+      const dataUrl = await toPng(longCardRef.current, { pixelRatio: 2 });
+      const link = document.createElement('a');
+      link.download = `${activeFile.title || 'export'}-long.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Long Image export failed', err);
     } finally {
       setExportingType(null);
     }
@@ -756,6 +844,18 @@ export default function App() {
                   >
                     {exportingType === 'zip' ? <Loader2 size={16} className="animate-spin" /> : <FileArchive size={16} />}
                     <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">ZIP Export</span>
+                  </button>
+                  <button 
+                    onClick={exportAllAsLongImage}
+                    disabled={!!exportingType}
+                    className={cn(
+                      "p-1.5 min-[1400px]:p-2 rounded-lg transition-all disabled:opacity-50 relative group",
+                      isDarkMode ? "hover:bg-zinc-800 text-purple-400" : "hover:bg-purple-50 text-purple-600"
+                    )}
+                    title="Export All as Long Image"
+                  >
+                    {exportingType === 'long-image' ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
+                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">长图导出</span>
                   </button>
                   <button 
                     onClick={exportAsMarkdown}
@@ -1206,11 +1306,11 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 3. Export tools */}
+                 {/* 3. Export tools */}
                 {pages.length > 0 && (
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">文档及卡片导出 (Export Options)</label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <button 
                         onClick={() => {
                           setIsMobileSettingsOpen(false);
@@ -1243,6 +1343,23 @@ export default function App() {
                       >
                         {exportingType === 'zip' ? <Loader2 size={16} className="animate-spin" /> : <FileArchive size={16} />}
                         <span>图片打包</span>
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          setIsMobileSettingsOpen(false);
+                          exportAllAsLongImage();
+                        }}
+                        disabled={!!exportingType}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all text-[10px] font-bold",
+                          isDarkMode 
+                            ? "bg-zinc-950/40 border-zinc-800 hover:border-zinc-700 text-purple-400" 
+                            : "bg-purple-50/20 border-purple-100 hover:border-purple-200 text-purple-600"
+                        )}
+                      >
+                        {exportingType === 'long-image' ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
+                        <span>长图导出</span>
                       </button>
 
                       <button 
@@ -1310,6 +1427,209 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Off-screen Long Image Content Core For contiguous continuous export */}
+      <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '600px', minWidth: '600px', maxWidth: '600px', pointerEvents: 'none' }}>
+        <div 
+          ref={longCardRef}
+          className={cn(
+            "p-10 flex flex-col",
+            isDarkMode ? "bg-zinc-950" : "bg-[#F9F9F7]"
+          )}
+          style={{ width: '600px', minWidth: '600px', maxWidth: '600px', boxSizing: 'border-box' }}
+        >
+          <div 
+            className={cn(
+              "relative w-full rounded-2xl overflow-hidden p-8 flex flex-col transition-all duration-300",
+              isDarkMode 
+                ? "bg-zinc-900 border border-zinc-800 text-zinc-100" 
+                : "bg-white border border-zinc-150 text-gray-900 shadow-sm",
+              activeFile.showGrid && (
+                isDarkMode 
+                  ? "bg-[radial-gradient(#3f3f46_1px,transparent_1px)] [background-size:20px_20px]"
+                  : "bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]"
+              )
+            )}
+          >
+            {/* Card Content */}
+            <div className={cn(
+              "flex-1 pb-12 z-10", 
+              activeFile.fontSize === 'xs' && "text-[12px]",
+              activeFile.fontSize === 'sm' && "text-[14px]",
+              activeFile.fontSize === 'base' && "text-[15px]",
+              activeFile.fontSize === 'lg' && "text-[18px]"
+            )}>
+              {/* File Title at the top of Long Image */}
+              <div className="mb-10 text-center">
+                <h1 className={cn(
+                  "text-3xl font-extrabold tracking-tight transition-colors",
+                  isDarkMode ? "text-white" : "text-zinc-950"
+                )}>
+                  {activeFile.title || '未命名'}
+                </h1>
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <div className={cn("h-[1px] w-12 rounded-full", isDarkMode ? "bg-zinc-800" : "bg-zinc-200")} />
+                  <div className={cn("w-1.5 h-1.5 rounded-full", isDarkMode ? "bg-zinc-700" : "bg-zinc-300")} />
+                  <div className={cn("h-[1px] w-12 rounded-full", isDarkMode ? "bg-zinc-800" : "bg-zinc-200")} />
+                </div>
+              </div>
+
+              <ReactMarkdown
+                urlTransform={(uri) => uri.startsWith('blob:') ? uri : uri}
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({ children }) => <h1 className={cn("font-bold mb-[0.6em] tracking-tight leading-tight text-[2em] transition-colors", isDarkMode ? "text-white" : "text-gray-900")}>{children}</h1>,
+                  h2: ({ children }) => <h2 className={cn("font-bold mb-[0.5em] tracking-tight leading-tight text-[1.5em] transition-colors", isDarkMode ? "text-zinc-100" : "text-gray-800")}>{children}</h2>,
+                  h3: ({ children }) => <h3 className={cn("font-bold mb-[0.4em] tracking-tight leading-tight text-[1.25em] transition-colors", isDarkMode ? "text-zinc-200" : "text-gray-800")}>{children}</h3>,
+                  h4: ({ children }) => <h4 className={cn("font-bold mb-[0.4em] tracking-tight leading-tight text-[1.1em] transition-colors", isDarkMode ? "text-zinc-200" : "text-gray-800")}>{children}</h4>,
+                  p: ({ children }) => <p className={cn("leading-relaxed mb-[1em] transition-colors", isDarkMode ? "text-zinc-300" : "text-gray-600")}>{children}</p>,
+                  strong: ({ children }) => <strong className={cn("font-bold transition-colors", isDarkMode ? "text-white" : "text-gray-900")}>{children}</strong>,
+                  img: ({ src, alt }) => (
+                    <img 
+                      src={src} 
+                      alt={alt} 
+                      className={cn("max-w-full h-auto rounded-lg my-[1em] shadow-md mx-auto transition-colors", isDarkMode ? "border border-zinc-800" : "border border-gray-100")} 
+                      referrerPolicy="no-referrer"
+                    />
+                  ),
+                  pre: ({ children }) => (
+                    <div className={cn("rounded-xl my-[1.2em] overflow-hidden shadow-lg border transition-colors", isDarkMode ? "bg-zinc-950 border-zinc-800/80" : "bg-[#1e1e1e] border-white/10")}>
+                      {/* Mac Style Header */}
+                      <div className={cn("flex items-center gap-1.5 px-4 py-3 border-b transition-colors", isDarkMode ? "bg-zinc-900 border-zinc-800/50" : "bg-[#2d2d2d] border-white/5")}>
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
+                      </div>
+                      <pre className={cn("p-5 m-0 whitespace-pre-wrap break-words text-[0.85em] transition-colors", isDarkMode ? "text-zinc-300 bg-zinc-950" : "text-gray-300")}>
+                        {children}
+                      </pre>
+                    </div>
+                  ),
+                  code: ({ node, className, children, ...props }: any) => {
+                    const isBlock = /language-(\w+)/.test(className || '') || String(children).includes('\n');
+                    if (isBlock) {
+                      return <code className={cn("font-mono leading-relaxed transition-colors", isDarkMode ? "text-zinc-300" : "text-gray-300", className)} {...props}>{children}</code>;
+                    }
+                    return <code className={cn("px-[0.4em] py-[0.1em] rounded font-mono text-[0.9em] transition-colors", isDarkMode ? "bg-zinc-800 text-zinc-300 border border-zinc-750" : "bg-orange-50 text-orange-600")} {...props}>{children}</code>;
+                  },
+                  ul: ({ className, children }: any) => {
+                    const isTaskList = className?.includes('contains-task-list');
+                    return (
+                      <ul className={cn(
+                        "list-outside space-y-[0.5em] mb-[1em] transition-colors",
+                        isTaskList ? "list-none ml-0 pl-[0.2em]" : "list-disc ml-[1.2em]",
+                        isDarkMode ? "text-zinc-300" : "text-gray-600",
+                        className
+                      )}>
+                        {children}
+                      </ul>
+                    );
+                  },
+                  ol: ({ className, children }: any) => <ol className={cn("list-decimal list-outside ml-[1.2em] space-y-[0.5em] mb-[1em] transition-colors", isDarkMode ? "text-zinc-300" : "text-gray-600", className)}>{children}</ol>,
+                  li: ({ className, children }: any) => {
+                    const isTask = className?.includes('task-list-item');
+                    return (
+                      <li className={cn(
+                        "pl-[0.2em] transition-colors", 
+                        isTask ? "list-none pl-0 flex items-start gap-2" : ""
+                      )}>
+                        {children}
+                      </li>
+                    );
+                  },
+                  input: ({ type, checked, className, ...props }: any) => {
+                    if (type === 'checkbox') {
+                      return (
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled
+                          className={cn(
+                            "mt-1 h-4 w-4 shrink-0 rounded border transition-colors cursor-default accent-blue-500 bg-transparent",
+                            isDarkMode
+                              ? "border-zinc-700 text-blue-500"
+                              : "border-gray-300 text-blue-600",
+                            className
+                          )}
+                          {...props}
+                        />
+                      );
+                    }
+                    return <input type={type} className={className} {...props} />;
+                  },
+                  blockquote: ({ children }) => (
+                    <blockquote className={cn("border-l-[0.25em] pl-[1em] italic my-[1.2em] transition-colors", isDarkMode ? "border-zinc-700 text-zinc-400" : "border-orange-200 text-gray-500")}>
+                      {children}
+                    </blockquote>
+                  ),
+                  table: ({ children }) => (
+                    <div className="overflow-x-auto mb-[1em]">
+                      <table className={cn("w-full border-collapse border text-left text-[0.9em] transition-colors", isDarkMode ? "border-zinc-800" : "border-gray-200")}>
+                        {children}
+                      </table>
+                    </div>
+                  ),
+                  thead: ({ children }) => <thead className={cn("transition-colors", isDarkMode ? "bg-zinc-800/50" : "bg-gray-50")}>{children}</thead>,
+                  th: ({ children }) => <th className={cn("border p-[0.6em] font-semibold transition-colors", isDarkMode ? "border-zinc-800 text-zinc-200 bg-zinc-900/50" : "border-gray-200 text-gray-700")}>{children}</th>,
+                  td: ({ children }) => <td className={cn("border p-[0.6em] transition-colors", isDarkMode ? "border-zinc-800 text-zinc-350" : "border-gray-200 text-gray-600")}>{children}</td>,
+                }}
+              >
+                {(activeFile.content || '')
+                  .split(/\n\s*---\s*\n/)
+                  .map(part => part.trim())
+                  .filter(p => p !== '')
+                  .join('\n\n')
+                }
+              </ReactMarkdown>
+            </div>
+
+            {/* Long Image Custom Footer Bar */}
+            <div className={cn(
+              "mt-8 pt-6 border-t flex items-center justify-between z-10",
+              isDarkMode ? "border-zinc-800" : "border-zinc-150"
+            )}>
+              {/* Left Side: Watermark + Date */}
+              <div className="flex flex-col gap-1 text-left">
+                {activeFile.footerText && (
+                  <span className={cn(
+                    "text-xs font-bold tracking-wide transition-colors",
+                    isDarkMode ? "text-zinc-200" : "text-zinc-950"
+                  )}>
+                    @{activeFile.footerText}
+                  </span>
+                )}
+                <span className={cn(
+                  "text-[11px] font-medium tracking-wider font-mono",
+                  isDarkMode ? "text-zinc-500" : "text-zinc-400"
+                )}>
+                  {formatDate(new Date())}
+                </span>
+              </div>
+
+              {/* Right Side: QR Code with App Logo Center */}
+              {qrCodeDataUrl && (
+                <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-white p-1 shadow-sm border border-zinc-200/80 flex items-center justify-center shrink-0">
+                  <img 
+                    src={qrCodeDataUrl} 
+                    alt="QR Code" 
+                    className="w-full h-full object-contain"
+                    referrerPolicy="no-referrer"
+                  />
+                  {/* Centered App Logo - Small and perfectly centered, safe under H error correction */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4.5 h-4.5 rounded bg-white p-[1px] shadow-sm flex items-center justify-center">
+                    <img 
+                      src={cardyIcon} 
+                      alt="Mini Logo" 
+                      className="w-3.5 h-3.5 object-cover rounded-xs"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Donation/Tipping Modal */}
       <SponsorModal
